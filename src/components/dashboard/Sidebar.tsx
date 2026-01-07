@@ -11,6 +11,7 @@ import {
   X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoMontseguro from "@/assets/logo-montseguro.png";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -50,7 +51,11 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
       )}>
         {/* Mobile close button */}
         <div className="flex h-14 items-center justify-between px-4 md:hidden">
-          <span className="text-sm font-medium">Menu</span>
+          <img 
+            src={logoMontseguro} 
+            alt="Montseguro" 
+            className="h-6 w-auto"
+          />
           <Button
             variant="ghost"
             size="icon"
@@ -62,8 +67,12 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
         </div>
         
         {/* Desktop header */}
-        <div className="hidden h-14 items-center px-4 md:flex">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/50">Navegação</span>
+        <div className="hidden h-14 items-center justify-center px-4 md:flex">
+          <img 
+            src={logoMontseguro} 
+            alt="Montseguro" 
+            className="h-8 w-auto"
+          />
         </div>
         
         <nav className="flex-1 px-2 py-1">

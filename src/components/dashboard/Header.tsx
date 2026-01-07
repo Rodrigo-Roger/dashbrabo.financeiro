@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import logoMontseguro from "@/assets/logo-montseguro.png";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -46,11 +47,11 @@ export function Header({ onMenuClick, userEmail, className }: HeaderProps) {
         </Button>
         
         <div className="flex items-center gap-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded bg-primary">
-            <span className="text-xs font-semibold text-primary-foreground">DB</span>
-          </div>
-          <Separator orientation="vertical" className="h-5 hidden sm:block" />
-          <span className="hidden text-sm font-medium text-foreground sm:block">DashBrabo</span>
+          <img 
+            src={logoMontseguro} 
+            alt="Montseguro" 
+            className="h-8 w-auto"
+          />
         </div>
       </div>
       
