@@ -9,17 +9,13 @@ import {
   SAMPLE_EMPLOYEES, 
   ROLES, 
   calculateCompensation, 
-  formatCurrency, 
-  getPerformanceStatus 
+  formatCurrency
 } from "@/lib/data";
 import { Header } from "@/components/dashboard/Header";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { EmployeeSelector } from "@/components/dashboard/EmployeeSelector";
-import { CareerPathCard } from "@/components/dashboard/CareerPathCard";
 import { CompensationBreakdown } from "@/components/dashboard/CompensationBreakdown";
-import { GoalTracker } from "@/components/dashboard/GoalTracker";
-import { BenefitsCard } from "@/components/dashboard/BenefitsCard";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { SimulatorView } from "@/components/dashboard/SimulatorView";
@@ -50,11 +46,6 @@ export default function Index() {
   );
   
   const role = ROLES[selectedEmployee.role];
-  const status = getPerformanceStatus(
-    selectedEmployee.quarterlyRevenue,
-    role.quarterlyStay,
-    role.quarterlyPromotion
-  );
   
   const renderContent = () => {
     switch (activeView) {
@@ -169,29 +160,9 @@ export default function Index() {
             </div>
             
             {/* Main Content Grid */}
-            <div className="grid gap-5 lg:grid-cols-3">
-              {/* Left Column - Career & Compensation */}
-              <div className="space-y-5 lg:col-span-2">
-                <div className="grid gap-5 md:grid-cols-2">
-                  <CareerPathCard
-                    currentLevel={selectedEmployee.role}
-                    path={selectedEmployee.path}
-                  />
-                  <CompensationBreakdown
-                    compensation={compensation}
-                  />
-                </div>
-                
-                <RevenueChart data={sampleRevenueData} />
-              </div>
-              
-              {/* Right Column - Goals */}
-              <div className="space-y-5">
-                <GoalTracker
-                  level={selectedEmployee.role}
-                  quarterlyRevenue={selectedEmployee.quarterlyRevenue}
-                />
-              </div>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <CompensationBreakdown compensation={compensation} />
+              <RevenueChart data={sampleRevenueData} />
             </div>
           </div>
         );
