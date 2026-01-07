@@ -1,4 +1,5 @@
-const API_BASE_URL = "https://ms.moskit.montseguro.link/api";
+import { supabase } from "@/integrations/supabase/client";
+
 const API_KEY = "i7YH9f-Or6D_2HUUR01IRnhH9sE2_bWCk13BYjZOuC-VF9yOPzJG1ZS_IwvIiSzE";
 
 export interface AuthTokens {
@@ -10,7 +11,7 @@ export interface AuthUser {
   username: string;
 }
 
-// Headers padrão para todas as requisições
+// Headers padrão para todas as requisições à API externa
 export const getAuthHeaders = (): HeadersInit => {
   const tokens = getTokens();
   const headers: HeadersInit = {
@@ -25,23 +26,21 @@ export const getAuthHeaders = (): HeadersInit => {
   return headers;
 };
 
-// Login
+// Login via Edge Function (evita CORS)
 export const login = async (username: string, password: string): Promise<AuthTokens> => {
-  const response = await fetch(`${API_BASE_URL}/auth/v1/token/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": API_KEY,
-    },
-    body: JSON.stringify({ username, password }),
+  const { data, error } = await supabase.functions.invoke("auth-proxy", {
+    body: { username, password },
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || "Credenciais inválidas");
+  if (error) {
+    throw new Error(error.message || "Erro ao conectar com o servidor");
   }
 
-  const tokens: AuthTokens = await response.json();
+  if (data.error) {
+    throw new Error(data.error);
+  }
+
+  const tokens: AuthTokens = data;
   saveTokens(tokens);
   saveUser({ username });
   
