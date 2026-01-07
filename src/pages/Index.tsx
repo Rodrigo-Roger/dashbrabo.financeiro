@@ -39,7 +39,7 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState('individual');
+  const [activeView, setActiveView] = useState('financial');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(SAMPLE_EMPLOYEES[0].id);
 
   useEffect(() => {
