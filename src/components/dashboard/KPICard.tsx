@@ -56,31 +56,31 @@ export function KPICard({
   return (
     <div 
       className={cn(
-        "relative overflow-hidden rounded-xl p-6 shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5",
+        "relative overflow-hidden rounded-lg border border-border p-5 transition-all duration-200 hover:border-primary/30",
         styles.container,
         className
       )}
     >
       <div className="flex items-start justify-between">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <p className={cn(
-            "text-sm font-medium",
-            variant === 'primary' ? 'text-primary-foreground/80' : 'text-muted-foreground'
+            "text-xs font-medium uppercase tracking-wider",
+            variant === 'primary' ? 'text-primary-foreground/70' : 'text-muted-foreground'
           )}>
             {title}
           </p>
-          <p className="text-3xl font-bold tracking-tight">{value}</p>
+          <p className="text-2xl font-bold tracking-tight">{value}</p>
           {subtitle && (
             <p className={cn(
-              "text-sm",
+              "text-xs",
               variant === 'primary' ? 'text-primary-foreground/60' : 'text-muted-foreground'
             )}>
               {subtitle}
             </p>
           )}
           {trend && (
-            <div className={cn("flex items-center gap-1 text-sm font-medium", styles.trend)}>
-              <span className={trend.value >= 0 ? 'text-success' : 'text-danger'}>
+            <div className={cn("flex items-center gap-1 text-xs font-medium", styles.trend)}>
+              <span className={trend.value >= 0 ? 'text-success' : 'text-destructive'}>
                 {trend.value >= 0 ? '+' : ''}{trend.value}%
               </span>
               <span className={variant === 'primary' ? 'text-primary-foreground/60' : 'text-muted-foreground'}>
@@ -90,10 +90,10 @@ export function KPICard({
           )}
         </div>
         <div className={cn(
-          "flex h-12 w-12 items-center justify-center rounded-xl",
+          "flex h-10 w-10 items-center justify-center rounded-lg",
           styles.icon
         )}>
-          <Icon className="h-6 w-6" />
+          <Icon className="h-5 w-5" />
         </div>
       </div>
     </div>
