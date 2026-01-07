@@ -54,7 +54,7 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
           <img 
             src={logoMontseguro} 
             alt="Montseguro" 
-            className="h-6 w-auto"
+            className="h-6 w-auto brightness-0 invert"
           />
           <Button
             variant="ghost"
@@ -71,7 +71,7 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
           <img 
             src={logoMontseguro} 
             alt="Montseguro" 
-            className="h-8 w-auto"
+            className="h-8 w-auto brightness-0 invert"
           />
         </div>
         
