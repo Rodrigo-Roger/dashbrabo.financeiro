@@ -5,13 +5,13 @@ interface ProgressBarProps {
   max: number;
   label?: string;
   showValue?: boolean;
-  variant?: 'default' | 'success' | 'warning' | 'danger';
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'auto';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 const variantStyles = {
-  default: 'bg-accent',
+  default: 'bg-primary',
   success: 'bg-success',
   warning: 'bg-warning',
   danger: 'bg-danger'
@@ -23,20 +23,26 @@ const sizeStyles = {
   lg: 'h-4'
 };
 
+// Get variant based on percentage thresholds: <50% red, 50-79% yellow, ≥80% green
+function getAutoVariant(percentage: number): 'success' | 'warning' | 'danger' {
+  if (percentage >= 80) return 'success';
+  if (percentage >= 50) return 'warning';
+  return 'danger';
+}
+
 export function ProgressBar({
   value,
   max,
   label,
   showValue = true,
-  variant = 'default',
+  variant = 'auto',
   size = 'md',
   className
 }: ProgressBarProps) {
   const percentage = Math.min((value / max) * 100, 100);
   
-  // Automatically determine variant based on percentage if not specified
-  const autoVariant = percentage >= 100 ? 'success' : percentage >= 70 ? 'default' : percentage >= 40 ? 'warning' : 'danger';
-  const finalVariant = variant === 'default' ? autoVariant : variant;
+  // Automatically determine variant based on percentage thresholds
+  const finalVariant = variant === 'auto' || variant === 'default' ? getAutoVariant(percentage) : variant;
   
   return (
     <div className={cn("space-y-2", className)}>
