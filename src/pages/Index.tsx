@@ -21,7 +21,7 @@ import { EmployeeSelector } from "@/components/dashboard/EmployeeSelector";
 import { CompensationBreakdown } from "@/components/dashboard/CompensationBreakdown";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
-import { SimulatorView } from "@/components/dashboard/SimulatorView";
+import { RolesGoalsView } from "@/components/dashboard/RolesGoalsView";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
 
 // Sample revenue data for chart
@@ -112,10 +112,10 @@ export default function Index() {
         return (
           <div className="space-y-5">
             <div className="border-b border-border pb-4">
-              <h2 className="text-lg font-semibold text-foreground">Simulador</h2>
-              <p className="text-sm text-muted-foreground">Simule diferentes cenários de remuneração</p>
+              <h2 className="text-lg font-semibold text-foreground">Cargos e Metas</h2>
+              <p className="text-sm text-muted-foreground">Defina cargos e visualize as metas correspondentes</p>
             </div>
-            <SimulatorView />
+            <RolesGoalsView />
           </div>
         );
       
