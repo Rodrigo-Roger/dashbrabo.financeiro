@@ -17,97 +17,80 @@ export function GoalTracker({ level, quarterlyRevenue, className }: GoalTrackerP
   const hasGoals = role.quarterlyStay || role.quarterlyPromotion;
   
   return (
-    <div className={cn("rounded-xl bg-card p-6 shadow-card", className)}>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-            <Target className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">Metas Trimestrais</h3>
-            <p className="text-sm text-muted-foreground">Acompanhamento de performance</p>
-          </div>
-        </div>
+    <div className={cn("rounded-lg border border-border bg-card p-5", className)}>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Metas Trimestrais
+        </h3>
         <StatusBadge status={status} />
       </div>
       
       {hasGoals ? (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Current Revenue */}
-          <div className="rounded-lg bg-muted/50 p-4">
-            <p className="text-sm text-muted-foreground">Receita Trimestral Atual</p>
-            <p className="text-3xl font-bold text-foreground">{formatCurrency(quarterlyRevenue)}</p>
+          <div className="rounded-md bg-secondary/50 p-3">
+            <p className="text-xs text-muted-foreground mb-0.5">Receita Atual</p>
+            <p className="text-xl font-semibold text-foreground">{formatCurrency(quarterlyRevenue)}</p>
           </div>
           
           {/* Stay Goal */}
           {role.quarterlyStay && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-1.5">
                   {quarterlyRevenue >= role.quarterlyStay ? (
-                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   ) : (
-                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <AlertTriangle className="h-3.5 w-3.5 text-warning" />
                   )}
-                  <span className="text-sm font-medium text-foreground">Meta de Permanência</span>
+                  <span className="text-muted-foreground">Permanência</span>
                 </div>
-                <span className="text-sm font-semibold text-muted-foreground">
+                <span className="font-medium text-foreground">
                   {formatCurrency(role.quarterlyStay)}
                 </span>
               </div>
               <ProgressBar
                 value={quarterlyRevenue}
                 max={role.quarterlyStay}
-                showValue
-                size="md"
+                size="sm"
               />
-              {quarterlyRevenue < role.quarterlyStay && (
-                <p className="text-sm text-warning">
-                  Faltam {formatCurrency(role.quarterlyStay - quarterlyRevenue)} para atingir
-                </p>
-              )}
             </div>
           )}
           
           {/* Promotion Goal */}
           {role.quarterlyPromotion && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-1.5">
                   {quarterlyRevenue >= role.quarterlyPromotion ? (
-                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   ) : (
-                    <TrendingUp className="h-4 w-4 text-info" />
+                    <TrendingUp className="h-3.5 w-3.5 text-primary" />
                   )}
-                  <span className="text-sm font-medium text-foreground">Meta de Promoção</span>
+                  <span className="text-muted-foreground">Promoção</span>
                 </div>
-                <span className="text-sm font-semibold text-muted-foreground">
+                <span className="font-medium text-foreground">
                   {formatCurrency(role.quarterlyPromotion)}
                 </span>
               </div>
               <ProgressBar
                 value={quarterlyRevenue}
                 max={role.quarterlyPromotion}
-                showValue
-                size="md"
+                size="sm"
               />
-              {quarterlyRevenue >= role.quarterlyPromotion ? (
-                <p className="text-sm text-success font-medium">
-                  🎉 Elegível para promoção!
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Faltam {formatCurrency(role.quarterlyPromotion - quarterlyRevenue)} para promoção
+              {quarterlyRevenue >= role.quarterlyPromotion && (
+                <p className="text-xs text-success font-medium">
+                  Elegível para promoção
                 </p>
               )}
             </div>
           )}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Target className="h-12 w-12 text-muted-foreground/50 mb-3" />
-          <p className="text-muted-foreground">
-            Este cargo não possui metas trimestrais definidas
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <Target className="h-8 w-8 text-muted-foreground/30 mb-2" />
+          <p className="text-sm text-muted-foreground">
+            Sem metas definidas
           </p>
         </div>
       )}

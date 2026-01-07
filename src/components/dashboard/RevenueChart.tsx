@@ -1,6 +1,4 @@
 import { cn } from "@/lib/utils";
-import { BarChart3 } from "lucide-react";
-import { formatCurrency } from "@/lib/data";
 
 interface RevenueChartProps {
   data: { month: string; value: number }[];
@@ -11,18 +9,15 @@ export function RevenueChart({ data, className }: RevenueChartProps) {
   const maxValue = Math.max(...data.map(d => d.value));
   
   return (
-    <div className={cn("rounded-xl bg-card p-6 shadow-card", className)}>
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-          <BarChart3 className="h-5 w-5 text-success" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-foreground">Receita Mensal</h3>
-          <p className="text-sm text-muted-foreground">Últimos 6 meses</p>
-        </div>
+    <div className={cn("rounded-lg border border-border bg-card p-5", className)}>
+      <div className="mb-5 flex items-center justify-between">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Receita Mensal
+        </h3>
+        <span className="text-xs text-muted-foreground">Últimos 6 meses</span>
       </div>
       
-      <div className="flex items-end justify-between gap-2 h-48">
+      <div className="flex items-end justify-between gap-3 h-40">
         {data.map((item, index) => {
           const height = (item.value / maxValue) * 100;
           
@@ -30,14 +25,14 @@ export function RevenueChart({ data, className }: RevenueChartProps) {
             <div key={index} className="flex flex-1 flex-col items-center gap-2">
               <div className="relative w-full flex justify-center">
                 <div
-                  className="w-full max-w-[40px] rounded-t-lg bg-success/80 transition-all duration-500 hover:bg-success"
-                  style={{ height: `${height * 1.6}px` }}
+                  className="w-full max-w-[32px] rounded-sm bg-primary/20 transition-colors hover:bg-primary/30"
+                  style={{ height: `${height * 1.3}px` }}
                 />
               </div>
               <div className="text-center">
-                <p className="text-xs font-medium text-muted-foreground">{item.month}</p>
-                <p className="text-xs font-semibold text-foreground">
-                  {formatCurrency(item.value).replace('R$', '')}
+                <p className="text-[10px] font-medium text-muted-foreground">{item.month}</p>
+                <p className="text-xs font-medium text-foreground tabular-nums">
+                  {(item.value / 1000).toFixed(0)}k
                 </p>
               </div>
             </div>

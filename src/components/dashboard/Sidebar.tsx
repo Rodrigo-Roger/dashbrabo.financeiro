@@ -38,35 +38,35 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
       {/* Overlay for mobile */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm md:hidden"
           onClick={onClose}
         />
       )}
       
       <aside className={cn(
-        "fixed left-0 top-0 z-50 flex h-full w-56 flex-col border-r border-border bg-card transition-transform duration-200 md:relative md:translate-x-0",
+        "fixed left-0 top-0 z-50 flex h-full w-52 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-200 md:relative md:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full",
         className
       )}>
         {/* Mobile close button */}
-        <div className="flex h-14 items-center justify-between border-b border-border px-4 md:hidden">
-          <span className="text-sm font-semibold">Menu</span>
+        <div className="flex h-14 items-center justify-between px-4 md:hidden">
+          <span className="text-sm font-medium">Menu</span>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-8 w-8"
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
         
         {/* Desktop header */}
-        <div className="hidden h-14 items-center border-b border-border px-4 md:flex">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Painel</span>
+        <div className="hidden h-14 items-center px-4 md:flex">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/50">Navegação</span>
         </div>
         
-        <nav className="flex-1 space-y-0.5 p-2">
+        <nav className="flex-1 px-2 py-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
@@ -79,21 +79,21 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
                   onClose?.();
                 }}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "flex w-full items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium transition-colors",
                   isActive 
-                    ? "bg-primary text-primary-foreground" 
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
               </button>
             );
           })}
           
-          <div className="my-3 h-px bg-border" />
+          <div className="my-3 mx-3 h-px bg-sidebar-border" />
           
-          <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
             Ferramentas
           </p>
           
@@ -109,13 +109,13 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
                   onClose?.();
                 }}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "flex w-full items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium transition-colors",
                   isActive 
-                    ? "bg-primary text-primary-foreground" 
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
               </button>
             );
@@ -123,12 +123,12 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
         </nav>
         
         {/* Footer */}
-        <div className="border-t border-border p-2">
-          <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+        <div className="border-t border-sidebar-border p-2">
+          <button className="flex w-full items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
             <HelpCircle className="h-4 w-4" />
             <span>Ajuda</span>
           </button>
-          <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+          <button className="flex w-full items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
             <Settings className="h-4 w-4" />
             <span>Configurações</span>
           </button>

@@ -11,17 +11,17 @@ const statusConfig = {
   safe: {
     label: 'Seguro',
     icon: CheckCircle2,
-    className: 'bg-success-muted text-success border-success/20'
+    className: 'bg-success/10 text-success'
   },
   at_risk: {
     label: 'Em Risco',
     icon: AlertTriangle,
-    className: 'bg-danger-muted text-danger border-danger/20'
+    className: 'bg-destructive/10 text-destructive'
   },
   eligible_promotion: {
-    label: 'Elegível Promoção',
+    label: 'Elegível',
     icon: TrendingUp,
-    className: 'bg-info-muted text-info border-info/20'
+    className: 'bg-primary/10 text-primary'
   }
 };
 
@@ -31,11 +31,11 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   
   return (
     <div className={cn(
-      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium",
+      "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium",
       config.className,
       className
     )}>
-      <Icon className="h-4 w-4" />
+      <Icon className="h-3 w-3" />
       <span>{config.label}</span>
     </div>
   );
