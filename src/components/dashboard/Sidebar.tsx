@@ -22,8 +22,8 @@ interface SidebarProps {
 }
 
 const menuItems = [
+  { id: 'financial', label: 'Dashboard', icon: DollarSign },
   { id: 'individual', label: 'Individual', icon: LayoutDashboard },
-  { id: 'financial', label: 'Financeiro', icon: DollarSign },
 ];
 
 const secondaryItems = [
