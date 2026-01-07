@@ -71,7 +71,7 @@ export default function Auth() {
         <img 
           src={logoMontseguro} 
           alt="Montseguro" 
-          className="h-40 w-auto"
+          className="h-28 w-auto brightness-0 invert"
         />
         <p className="mt-4 text-sm text-sidebar-foreground/60">
           Sistema de Acompanhamento do Financeiro
