@@ -44,7 +44,7 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
       )}
       
       <aside className={cn(
-        "fixed left-0 top-0 z-50 flex h-full w-52 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-200 md:relative md:translate-x-0",
+        "fixed left-0 top-0 z-50 flex h-screen w-52 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-200 md:relative md:translate-x-0 md:h-screen md:sticky md:top-0",
         isOpen ? "translate-x-0" : "-translate-x-full",
         className
       )}>

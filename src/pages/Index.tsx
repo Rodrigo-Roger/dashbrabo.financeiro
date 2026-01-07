@@ -170,7 +170,7 @@ export default function Index() {
   };
   
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex h-screen w-full overflow-hidden bg-background">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -178,7 +178,7 @@ export default function Index() {
         onViewChange={setActiveView}
       />
       
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="flex-1 overflow-auto p-4 md:p-5 lg:p-6">
