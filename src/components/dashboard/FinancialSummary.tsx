@@ -66,33 +66,19 @@ export function FinancialSummary({ employees, className }: FinancialSummaryProps
               className={cn(
                 "rounded-lg border p-5",
                 metric.highlight
-                  ? "bg-primary border-primary text-primary-foreground"
+                  ? "bg-card border-primary/40 ring-1 ring-primary/20"
                   : "bg-card border-border"
               )}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1 min-w-0">
-                  <p
-                    className={cn(
-                      "text-xs font-medium",
-                      metric.highlight
-                        ? "text-primary-foreground/70"
-                        : "text-muted-foreground"
-                    )}
-                  >
+                  <p className="text-xs font-medium text-muted-foreground">
                     {metric.label}
                   </p>
-                  <p className="text-2xl font-semibold tracking-tight">
+                  <p className="text-2xl font-semibold tracking-tight text-foreground">
                     {formatCurrency(metric.value)}
                   </p>
-                  <p
-                    className={cn(
-                      "text-xs",
-                      metric.highlight
-                        ? "text-primary-foreground/60"
-                        : "text-muted-foreground"
-                    )}
-                  >
+                  <p className="text-xs text-muted-foreground">
                     {metric.description}
                   </p>
                 </div>
@@ -100,7 +86,7 @@ export function FinancialSummary({ employees, className }: FinancialSummaryProps
                   className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                     metric.highlight
-                      ? "bg-primary-foreground/15 text-primary-foreground"
+                      ? "bg-primary/15 text-primary"
                       : metric.color
                   )}
                 >
