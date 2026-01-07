@@ -19,6 +19,7 @@ import { CompensationBreakdown } from "@/components/dashboard/CompensationBreakd
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { SimulatorView } from "@/components/dashboard/SimulatorView";
+import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
 
 // Sample revenue data for chart
 const sampleRevenueData = [
@@ -76,9 +77,9 @@ export default function Index() {
           <div className="space-y-5">
             <div className="border-b border-border pb-4">
               <h2 className="text-lg font-semibold text-foreground">Resumo Financeiro</h2>
-              <p className="text-sm text-muted-foreground">Visão geral de custos e projeções</p>
+              <p className="text-sm text-muted-foreground">Custo total mensal com equipe comercial</p>
             </div>
-            <TeamOverview employees={SAMPLE_EMPLOYEES} />
+            <FinancialSummary employees={SAMPLE_EMPLOYEES} />
           </div>
         );
       
