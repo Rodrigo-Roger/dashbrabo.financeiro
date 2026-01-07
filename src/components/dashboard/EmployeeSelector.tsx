@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { ChevronDown, User } from "lucide-react";
 import { Employee, ROLES } from "@/lib/data";
 import {
   Select,
@@ -20,29 +19,24 @@ export function EmployeeSelector({ employees, selectedId, onSelect, className }:
   const selectedEmployee = employees.find(e => e.id === selectedId);
   
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <User className="h-5 w-5" />
-      </div>
-      <Select value={selectedId} onValueChange={onSelect}>
-        <SelectTrigger className="w-[280px] border-0 bg-transparent text-lg font-semibold shadow-none focus:ring-0">
-          <SelectValue>
-            {selectedEmployee?.name}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {employees.map((employee) => (
-            <SelectItem key={employee.id} value={employee.id}>
-              <div className="flex flex-col">
-                <span className="font-medium">{employee.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {ROLES[employee.role].name}
-                </span>
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <Select value={selectedId} onValueChange={onSelect}>
+      <SelectTrigger className={cn("w-[220px] h-9 text-sm bg-card", className)}>
+        <SelectValue>
+          {selectedEmployee?.name}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {employees.map((employee) => (
+          <SelectItem key={employee.id} value={employee.id}>
+            <div className="flex flex-col">
+              <span className="text-sm">{employee.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {ROLES[employee.role].name}
+              </span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

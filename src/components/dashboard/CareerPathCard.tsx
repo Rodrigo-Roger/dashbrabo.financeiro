@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Briefcase, Code, Users, ChevronRight } from "lucide-react";
+import { Code, Users, ChevronRight } from "lucide-react";
 import { CareerPath, CareerLevel, ROLES, formatCurrency } from "@/lib/data";
 
 interface CareerPathCardProps {
@@ -17,32 +17,23 @@ export function CareerPathCard({ currentLevel, path, onLevelChange, className }:
   const currentIndex = levels.indexOf(currentLevel);
   
   return (
-    <div className={cn("rounded-xl bg-card p-6 shadow-card", className)}>
-      <div className="mb-6 flex items-center gap-3">
-        <div className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-lg",
-          path === 'specialist' ? 'bg-accent text-accent-foreground' : 'bg-primary text-primary-foreground'
-        )}>
-          {path === 'specialist' ? <Code className="h-5 w-5" /> : <Users className="h-5 w-5" />}
-        </div>
-        <div>
-          <h3 className="font-semibold text-foreground">
-            {path === 'specialist' ? 'Trilha Especialista' : 'Trilha Liderança'}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {path === 'specialist' 
-              ? 'Foco em resultados técnicos e profundidade'
-              : 'Foco em resultados globais e equipe'
-            }
-          </p>
-        </div>
+    <div className={cn("rounded-lg border border-border bg-card p-5", className)}>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {path === 'specialist' ? 'Trilha Especialista' : 'Trilha Liderança'}
+        </h3>
+        {path === 'specialist' ? (
+          <Code className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <Users className="h-4 w-4 text-muted-foreground" />
+        )}
       </div>
       
       <div className="relative">
         {/* Progress line */}
-        <div className="absolute left-5 top-0 h-full w-0.5 bg-border" />
+        <div className="absolute left-[11px] top-2 bottom-2 w-px bg-border" />
         
-        <div className="space-y-4">
+        <div className="space-y-1">
           {levels.map((level, index) => {
             const role = ROLES[level];
             const isActive = level === currentLevel;
@@ -54,44 +45,36 @@ export function CareerPathCard({ currentLevel, path, onLevelChange, className }:
                 key={level}
                 onClick={() => onLevelChange?.(level)}
                 className={cn(
-                  "relative flex w-full items-center gap-4 rounded-lg p-3 text-left transition-all",
-                  isActive && "bg-primary/10 ring-2 ring-primary",
-                  !isActive && "hover:bg-muted/50",
-                  isFuture && "opacity-50"
+                  "relative flex w-full items-center gap-3 rounded px-2 py-2 text-left transition-colors",
+                  isActive && "bg-primary/5",
+                  !isActive && "hover:bg-secondary/50",
+                  isFuture && "opacity-40"
                 )}
               >
                 {/* Node */}
                 <div className={cn(
-                  "relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2",
-                  isActive && "border-primary bg-primary text-primary-foreground",
-                  isPast && "border-success bg-success text-success-foreground",
-                  isFuture && "border-border bg-background text-muted-foreground"
+                  "relative z-10 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2",
+                  isActive && "border-primary bg-primary",
+                  isPast && "border-success bg-success",
+                  isFuture && "border-border bg-card"
                 )}>
-                  {isPast ? (
-                    <ChevronRight className="h-5 w-5" />
-                  ) : (
-                    <Briefcase className="h-5 w-5" />
+                  {(isActive || isPast) && (
+                    <ChevronRight className="h-3 w-3 text-white" />
                   )}
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <p className={cn(
-                    "font-medium truncate",
-                    isActive ? "text-primary" : "text-foreground"
+                    "text-sm font-medium truncate",
+                    isActive ? "text-foreground" : "text-muted-foreground"
                   )}>
                     {role.name}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Base: {formatCurrency(role.baseSalary)}
-                  </p>
                 </div>
                 
-                <div className="text-right">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {role.variableMax > 0 ? `${role.variableMin}%-${role.variableMax}%` : '—'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">variável</p>
-                </div>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {formatCurrency(role.baseSalary)}
+                </span>
               </button>
             );
           })}
