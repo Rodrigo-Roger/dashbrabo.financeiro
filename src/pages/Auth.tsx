@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,44 +7,33 @@ import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { z } from "zod";
 import logoMontseguro from "@/assets/logo-montseguro.png";
+import { login, isAuthenticated } from "@/lib/auth";
 
 const authSchema = z.object({
   username: z.string().trim().min(1, "Usuário é obrigatório").max(255, "Usuário muito longo"),
-  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").max(72, "Senha muito longa"),
+  password: z.string().min(1, "Senha é obrigatória").max(72, "Senha muito longa"),
 });
 
 export default function Auth() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session) {
-          navigate("/", { replace: true });
-        }
-        setCheckingSession(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/", { replace: true });
-      }
-      setCheckingSession(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // Verificar se já está autenticado
+    if (isAuthenticated()) {
+      navigate("/", { replace: true });
+    }
+    setCheckingSession(false);
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validation = authSchema.safeParse({ username: email, password });
+    const validation = authSchema.safeParse({ username, password });
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
       return;
@@ -54,21 +42,15 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          toast.error("Email ou senha incorretos");
-        } else {
-          toast.error(error.message);
-        }
-      } else {
-        toast.success("Login realizado com sucesso!");
-      }
+      await login(username.trim(), password);
+      toast.success("Login realizado com sucesso!");
+      navigate("/", { replace: true });
     } catch (error) {
-      toast.error("Ocorreu um erro. Tente novamente.");
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Ocorreu um erro. Tente novamente.");
+      }
     } finally {
       setLoading(false);
     }
@@ -107,15 +89,15 @@ export default function Auth() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium text-white">
+            <Label htmlFor="username" className="text-sm font-medium text-white">
               Usuário
             </Label>
             <Input
-              id="email"
+              id="username"
               type="text"
               placeholder="Digite seu usuário"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
               className="h-11 border-sidebar-border bg-sidebar text-white placeholder:text-sidebar-foreground/40 focus:border-primary focus:ring-primary"
             />
