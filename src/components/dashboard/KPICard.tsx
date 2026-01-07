@@ -36,9 +36,9 @@ const variantStyles = {
     trend: 'text-danger'
   },
   primary: {
-    container: 'bg-primary border-primary text-primary-foreground',
-    icon: 'bg-primary-foreground/15 text-primary-foreground',
-    trend: 'text-primary-foreground/70'
+    container: 'bg-card border-primary/40 ring-1 ring-primary/20',
+    icon: 'bg-primary/15 text-primary',
+    trend: 'text-primary/70'
   }
 };
 
@@ -63,18 +63,12 @@ export function KPICard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <p className={cn(
-            "text-xs font-medium text-muted-foreground",
-            variant === 'primary' && 'text-primary-foreground/70'
-          )}>
+          <p className="text-xs font-medium text-muted-foreground">
             {title}
           </p>
           <p className="text-2xl font-semibold tracking-tight">{value}</p>
           {subtitle && (
-            <p className={cn(
-              "text-xs text-muted-foreground",
-              variant === 'primary' && 'text-primary-foreground/60'
-            )}>
+            <p className="text-xs text-muted-foreground">
               {subtitle}
             </p>
           )}
@@ -83,7 +77,7 @@ export function KPICard({
               <span className={cn("font-medium", trend.value >= 0 ? 'text-success' : 'text-destructive')}>
                 {trend.value >= 0 ? '+' : ''}{trend.value}%
               </span>
-              <span className={cn("text-muted-foreground", variant === 'primary' && 'text-primary-foreground/50')}>
+              <span className="text-muted-foreground">
                 {trend.label}
               </span>
             </div>
