@@ -8,27 +8,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { logout } from "@/lib/auth";
 import logoMontseguro from "@/assets/logo-montseguro.png";
 
 interface HeaderProps {
   onMenuClick?: () => void;
-  userEmail?: string;
+  userEmail?: string | null;
   className?: string;
 }
 
 export function Header({ onMenuClick, userEmail, className }: HeaderProps) {
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Erro ao sair");
-    } else {
-      navigate("/auth", { replace: true });
-    }
+  const handleLogout = () => {
+    logout();
+    navigate("/auth", { replace: true });
   };
 
   return (
