@@ -66,14 +66,8 @@ export function Sidebar({ isOpen = true, onClose, activeView, onViewChange, clas
           </Button>
         </div>
         
-        {/* Desktop header */}
-        <div className="hidden h-14 items-center justify-center px-4 md:flex">
-          <img 
-            src={logoMontseguro} 
-            alt="Montseguro" 
-            className="h-8 w-auto brightness-0 invert"
-          />
-        </div>
+        {/* Desktop header spacer */}
+        <div className="hidden h-14 md:block" />
         
         <nav className="flex-1 px-2 py-1">
           {menuItems.map((item) => {
