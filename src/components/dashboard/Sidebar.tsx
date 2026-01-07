@@ -23,8 +23,6 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'individual', label: 'Individual', icon: LayoutDashboard },
-  { id: 'team', label: 'Equipe', icon: Users },
-  { id: 'unit', label: 'Unidade', icon: Building2 },
   { id: 'financial', label: 'Financeiro', icon: DollarSign },
 ];
 
