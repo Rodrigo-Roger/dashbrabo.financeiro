@@ -12,7 +12,7 @@ export function RevenueChart({ data, className }: RevenueChartProps) {
     <div className={cn("rounded-lg border border-border bg-card p-5", className)}>
       <div className="mb-5 flex items-center justify-between">
         <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Receita Mensal
+          Histórico de Pagamento
         </h3>
         <span className="text-xs text-muted-foreground">Últimos 6 meses</span>
       </div>
