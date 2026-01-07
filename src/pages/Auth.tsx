@@ -76,14 +76,14 @@ export default function Auth() {
 
   if (checkingSession) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-sidebar">
+      <div className="flex h-screen w-full items-center justify-center" style={{ backgroundColor: 'hsl(222, 47%, 11%)' }}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-sidebar px-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center px-4" style={{ backgroundColor: 'hsl(222, 47%, 11%)' }}>
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center">
         <img 
