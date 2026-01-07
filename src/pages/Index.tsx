@@ -185,15 +185,11 @@ export default function Index() {
                 <RevenueChart data={sampleRevenueData} />
               </div>
               
-              {/* Right Column - Goals & Benefits */}
+              {/* Right Column - Goals */}
               <div className="space-y-5">
                 <GoalTracker
                   level={selectedEmployee.role}
                   quarterlyRevenue={selectedEmployee.quarterlyRevenue}
-                />
-                <BenefitsCard
-                  level={selectedEmployee.role}
-                  tenure={selectedEmployee.tenure}
                 />
               </div>
             </div>
