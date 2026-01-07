@@ -1,9 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Wallet, 
   TrendingUp, 
   Award, 
-  DollarSign
+  DollarSign,
+  Loader2
 } from "lucide-react";
 import { 
   SAMPLE_EMPLOYEES, 
@@ -11,6 +13,8 @@ import {
   calculateCompensation, 
   formatCurrency
 } from "@/lib/data";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 import { Header } from "@/components/dashboard/Header";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { KPICard } from "@/components/dashboard/KPICard";
@@ -32,9 +36,34 @@ const sampleRevenueData = [
 ];
 
 export default function Index() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState('individual');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(SAMPLE_EMPLOYEES[0].id);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        if (!session) {
+          navigate("/auth", { replace: true });
+        }
+        setLoading(false);
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (!session) {
+        navigate("/auth", { replace: true });
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
   
   const selectedEmployee = useMemo(
     () => SAMPLE_EMPLOYEES.find(e => e.id === selectedEmployeeId)!,
@@ -47,7 +76,15 @@ export default function Index() {
   );
   
   const role = ROLES[selectedEmployee.role];
-  
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   const renderContent = () => {
     switch (activeView) {
       case 'team':
@@ -180,7 +217,7 @@ export default function Index() {
       />
       
       <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header onMenuClick={() => setSidebarOpen(true)} userEmail={user?.email} />
         
         <main className="flex-1 overflow-auto p-4 md:p-5 lg:p-6">
           {renderContent()}
