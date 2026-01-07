@@ -27,7 +27,7 @@ const menuItems = [
 ];
 
 const secondaryItems = [
-  { id: 'simulator', label: 'Simulador', icon: TrendingUp },
+  { id: 'simulator', label: 'Definição de cargos/metas', icon: TrendingUp },
   { id: 'promotions', label: 'Promoções', icon: Award },
 ];
 
