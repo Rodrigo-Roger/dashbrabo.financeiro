@@ -10,7 +10,7 @@ import { z } from "zod";
 import logoMontseguro from "@/assets/logo-montseguro.png";
 
 const authSchema = z.object({
-  email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
+  username: z.string().trim().min(1, "Usuário é obrigatório").max(255, "Usuário muito longo"),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").max(72, "Senha muito longa"),
 });
 
@@ -45,7 +45,7 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validation = authSchema.safeParse({ email, password });
+    const validation = authSchema.safeParse({ username: email, password });
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
       return;
@@ -89,7 +89,7 @@ export default function Auth() {
         <img 
           src={logoMontseguro} 
           alt="Montseguro" 
-          className="h-24 w-auto"
+          className="h-24 w-auto brightness-0 invert"
         />
         <p className="mt-4 text-sm text-sidebar-foreground/60">
           Sistema de Acompanhamento do Financeiro
@@ -112,7 +112,7 @@ export default function Auth() {
             </Label>
             <Input
               id="email"
-              type="email"
+              type="text"
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
