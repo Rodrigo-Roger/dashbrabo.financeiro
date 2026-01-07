@@ -89,10 +89,10 @@ export default function Auth() {
         <img 
           src={logoMontseguro} 
           alt="Montseguro" 
-          className="h-12 w-auto"
+          className="h-24 w-auto"
         />
         <p className="mt-4 text-sm text-sidebar-foreground/60">
-          Sistema de Acompanhamento de Metas
+          Sistema de Acompanhamento do Financeiro
         </p>
       </div>
 
@@ -108,7 +108,7 @@ export default function Auth() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm font-medium text-white">
-              Email
+              Usuário
             </Label>
             <Input
               id="email"
