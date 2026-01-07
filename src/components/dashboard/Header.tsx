@@ -26,10 +26,10 @@ export function Header({ onMenuClick, className }: HeaderProps) {
         
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded bg-primary">
-            <span className="text-xs font-semibold text-primary-foreground">FH</span>
+            <span className="text-xs font-semibold text-primary-foreground">DB</span>
           </div>
           <Separator orientation="vertical" className="h-5 hidden sm:block" />
-          <span className="hidden text-sm font-medium text-foreground sm:block">FinanceHub</span>
+          <span className="hidden text-sm font-medium text-foreground sm:block">DashBrabo</span>
         </div>
       </div>
       
