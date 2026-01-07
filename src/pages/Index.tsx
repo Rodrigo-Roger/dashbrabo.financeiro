@@ -60,10 +60,10 @@ export default function Index() {
     switch (activeView) {
       case 'team':
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Visão de Equipe</h2>
-              <p className="text-muted-foreground">Acompanhe a performance de todos os colaboradores</p>
+          <div className="space-y-5">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Visão de Equipe</h2>
+              <p className="text-sm text-muted-foreground">Acompanhe a performance de todos os colaboradores</p>
             </div>
             <TeamOverview employees={SAMPLE_EMPLOYEES} />
           </div>
@@ -71,10 +71,10 @@ export default function Index() {
       
       case 'unit':
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Visão de Unidade</h2>
-              <p className="text-muted-foreground">Métricas consolidadas por unidade de negócio</p>
+          <div className="space-y-5">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Visão de Unidade</h2>
+              <p className="text-sm text-muted-foreground">Métricas consolidadas por unidade de negócio</p>
             </div>
             <TeamOverview employees={SAMPLE_EMPLOYEES} />
           </div>
@@ -82,10 +82,10 @@ export default function Index() {
       
       case 'financial':
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Resumo Financeiro</h2>
-              <p className="text-muted-foreground">Visão geral de custos e projeções</p>
+          <div className="space-y-5">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Resumo Financeiro</h2>
+              <p className="text-sm text-muted-foreground">Visão geral de custos e projeções</p>
             </div>
             <TeamOverview employees={SAMPLE_EMPLOYEES} />
           </div>
@@ -93,10 +93,10 @@ export default function Index() {
       
       case 'simulator':
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Simulador</h2>
-              <p className="text-muted-foreground">Simule diferentes cenários de remuneração</p>
+          <div className="space-y-5">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Simulador</h2>
+              <p className="text-sm text-muted-foreground">Simule diferentes cenários de remuneração</p>
             </div>
             <SimulatorView />
           </div>
@@ -104,10 +104,10 @@ export default function Index() {
       
       case 'promotions':
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Promoções</h2>
-              <p className="text-muted-foreground">Colaboradores elegíveis para promoção</p>
+          <div className="space-y-5">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Promoções</h2>
+              <p className="text-sm text-muted-foreground">Colaboradores elegíveis para promoção</p>
             </div>
             <TeamOverview 
               employees={SAMPLE_EMPLOYEES.filter(e => {
@@ -120,19 +120,20 @@ export default function Index() {
       
       default:
         return (
-          <div className="space-y-6">
-            {/* Employee Selector */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-5">
+            {/* Header */}
+            <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Visão Individual</h2>
+                <p className="text-sm text-muted-foreground">
+                  {role.name} • Trilha {selectedEmployee.path === 'specialist' ? 'Especialista' : 'Liderança'}
+                </p>
+              </div>
               <EmployeeSelector
                 employees={SAMPLE_EMPLOYEES}
                 selectedId={selectedEmployeeId}
                 onSelect={setSelectedEmployeeId}
               />
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{role.name}</span>
-                <span className="mx-2">•</span>
-                <span>Trilha {selectedEmployee.path === 'specialist' ? 'Especialista' : 'Liderança'}</span>
-              </div>
             </div>
             
             {/* KPI Cards */}
@@ -142,7 +143,6 @@ export default function Index() {
                 value={formatCurrency(compensation.baseSalary)}
                 subtitle="Mensal"
                 icon={Wallet}
-                className="animate-slide-up opacity-0 stagger-1"
               />
               <KPICard
                 title="Variável"
@@ -150,15 +150,13 @@ export default function Index() {
                 subtitle={`${role.variableMin}%-${role.variableMax}% da demanda`}
                 icon={TrendingUp}
                 variant="success"
-                className="animate-slide-up opacity-0 stagger-2"
               />
               <KPICard
-                title="Bônus e Add-ons"
+                title="Bônus"
                 value={formatCurrency(compensation.teamBonus + compensation.promotionAddOn + compensation.unitAddOn)}
                 subtitle="Este mês"
                 icon={Award}
                 variant="warning"
-                className="animate-slide-up opacity-0 stagger-3"
               />
               <KPICard
                 title="Total"
@@ -167,43 +165,35 @@ export default function Index() {
                 icon={DollarSign}
                 variant="primary"
                 trend={{ value: 12.5, label: 'vs. mês anterior' }}
-                className="animate-slide-up opacity-0 stagger-4"
               />
             </div>
             
             {/* Main Content Grid */}
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid gap-5 lg:grid-cols-3">
               {/* Left Column - Career & Compensation */}
-              <div className="space-y-6 lg:col-span-2">
-                <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-5 lg:col-span-2">
+                <div className="grid gap-5 md:grid-cols-2">
                   <CareerPathCard
                     currentLevel={selectedEmployee.role}
                     path={selectedEmployee.path}
-                    className="animate-slide-up opacity-0 stagger-2"
                   />
                   <CompensationBreakdown
                     compensation={compensation}
-                    className="animate-slide-up opacity-0 stagger-3"
                   />
                 </div>
                 
-                <RevenueChart 
-                  data={sampleRevenueData} 
-                  className="animate-slide-up opacity-0 stagger-4"
-                />
+                <RevenueChart data={sampleRevenueData} />
               </div>
               
               {/* Right Column - Goals & Benefits */}
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <GoalTracker
                   level={selectedEmployee.role}
                   quarterlyRevenue={selectedEmployee.quarterlyRevenue}
-                  className="animate-slide-up opacity-0 stagger-3"
                 />
                 <BenefitsCard
                   level={selectedEmployee.role}
                   tenure={selectedEmployee.tenure}
-                  className="animate-slide-up opacity-0 stagger-4"
                 />
               </div>
             </div>
@@ -221,10 +211,10 @@ export default function Index() {
         onViewChange={setActiveView}
       />
       
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-auto p-4 md:p-5 lg:p-6">
           {renderContent()}
         </main>
       </div>
