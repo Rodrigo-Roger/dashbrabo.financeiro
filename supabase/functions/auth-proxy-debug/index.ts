@@ -17,16 +17,17 @@ serve(async (req) => {
   }
 
   try {
-    console.log("=== AUTH-PROXY ===");
-    const body = await req.json();
-    const { username, password } = body;
+    console.log("🔍 Debug Auth Proxy");
+    console.log("Request body:", await req.clone().text());
 
-    console.log("Credenciais recebidas:", { username, password: "***" });
+    const { username, password } = await req.json();
 
     if (!username || !password) {
-      console.log("Erro: Credenciais incompletas");
       return new Response(
-        JSON.stringify({ error: "Username e password são obrigatórios" }),
+        JSON.stringify({
+          error: "Username e password são obrigatórios",
+          received: { username, password },
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -34,10 +35,9 @@ serve(async (req) => {
       );
     }
 
-    // Fazer requisição para a API externa
-    console.log("Enviando para API:", `${API_BASE_URL}/auth/v1/token/`);
+    console.log("📤 Enviando para API:", `${API_BASE_URL}/auth/v1/token/`);
 
-    const response = await fetch(`${API_BASE_URL}/auth/v1/token/`, {
+    const apiResponse = await fetch(`${API_BASE_URL}/auth/v1/token/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -46,28 +46,34 @@ serve(async (req) => {
       body: JSON.stringify({ username, password }),
     });
 
-    console.log("Status da API:", response.status);
-    const data = await response.json();
-    console.log("Resposta da API:", data);
+    console.log("📥 Resposta da API - Status:", apiResponse.status);
 
-    if (!response.ok) {
-      console.log("Erro na API:", data);
+    const data = await apiResponse.json();
+
+    console.log("📥 Dados da resposta:", data);
+
+    if (!apiResponse.ok) {
+      console.error("❌ Erro na API:", data);
       return new Response(
-        JSON.stringify({ error: data.detail || "Credenciais inválidas" }),
+        JSON.stringify({
+          error: data.detail || "Credenciais inválidas",
+          details: data,
+          api_status: apiResponse.status,
+        }),
         {
-          status: response.status,
+          status: apiResponse.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    console.log("Login bem-sucedido!");
+    console.log("✅ Login bem-sucedido");
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Erro no auth-proxy:", error);
+    console.error("❌ Erro no auth-proxy-debug:", error);
     return new Response(
       JSON.stringify({
         error: "Erro ao conectar com o servidor",

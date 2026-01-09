@@ -10,8 +10,15 @@ import logoMontseguro from "@/assets/logo-montseguro.png";
 import { login, isAuthenticated } from "@/lib/auth";
 
 const authSchema = z.object({
-  username: z.string().trim().min(1, "Usuário é obrigatório").max(255, "Usuário muito longo"),
-  password: z.string().min(1, "Senha é obrigatória").max(72, "Senha muito longa"),
+  username: z
+    .string()
+    .trim()
+    .min(1, "Usuário é obrigatório")
+    .max(255, "Usuário muito longo"),
+  password: z
+    .string()
+    .min(1, "Senha é obrigatória")
+    .max(72, "Senha muito longa"),
 });
 
 export default function Auth() {
@@ -32,7 +39,7 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validation = authSchema.safeParse({ username, password });
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
@@ -58,19 +65,25 @@ export default function Auth() {
 
   if (checkingSession) {
     return (
-      <div className="flex h-screen w-full items-center justify-center" style={{ backgroundColor: 'hsl(222, 47%, 11%)' }}>
+      <div
+        className="flex h-screen w-full items-center justify-center"
+        style={{ backgroundColor: "hsl(222, 47%, 11%)" }}
+      >
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center px-4" style={{ backgroundColor: 'hsl(222, 47%, 11%)' }}>
+    <div
+      className="flex min-h-screen w-full flex-col items-center justify-center px-4"
+      style={{ backgroundColor: "hsl(222, 47%, 11%)" }}
+    >
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center">
-        <img 
-          src={logoMontseguro} 
-          alt="Montseguro" 
+        <img
+          src={logoMontseguro}
+          alt="Montseguro"
           className="h-28 w-auto brightness-0 invert"
         />
         <p className="mt-4 text-sm text-sidebar-foreground/60">
@@ -89,7 +102,10 @@ export default function Auth() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-sm font-medium text-white">
+            <Label
+              htmlFor="username"
+              className="text-sm font-medium text-white"
+            >
               Usuário
             </Label>
             <Input
@@ -104,7 +120,10 @@ export default function Auth() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm font-medium text-white">
+            <Label
+              htmlFor="password"
+              className="text-sm font-medium text-white"
+            >
               Senha
             </Label>
             <div className="relative">
@@ -131,16 +150,12 @@ export default function Auth() {
             </div>
           </div>
 
-          <Button 
-            type="submit" 
-            className="h-11 w-full bg-primary text-primary-foreground hover:bg-primary/90" 
+          <Button
+            type="submit"
+            className="h-11 w-full bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={loading}
           >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              "Entrar"
-            )}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
           </Button>
         </form>
       </div>
