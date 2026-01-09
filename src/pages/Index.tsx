@@ -27,6 +27,29 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { RolesGoalsView } from "@/components/dashboard/RolesGoalsView";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Sample revenue data for chart
 const sampleRevenueData = [
@@ -47,6 +70,8 @@ export default function Index() {
     null
   );
   const [fallbackToSample, setFallbackToSample] = useState(false);
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Buscar funcionários da API
   const {
@@ -54,7 +79,12 @@ export default function Index() {
     isLoading,
     error,
     status: employeeStatus,
-  } = useEmployees();
+  } = useEmployees({
+    startDate: dateRange.from
+      ? format(dateRange.from, "yyyy-MM-dd")
+      : undefined,
+    endDate: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+  });
 
   // Buscar informações do usuário logado (perfil e permissões)
   const { data: currentUser, status: userStatus } = useCurrentUser();
@@ -87,45 +117,10 @@ export default function Index() {
     return employees || SAMPLE_EMPLOYEES;
   }, [employees, fallbackToSample, error]);
 
-  // Vendedores que o usuário tem permissão para ver (baseado no Django)
+  // Backend já retorna filtrado por permissão; usamos todos
   const allowedEmployees = useMemo(() => {
-    console.log("🔄 Calculando allowedEmployees...", {
-      allEmployees: allEmployees?.length,
-      currentUser: currentUser?.perfil,
-    });
-
-    if (!currentUser) {
-      console.log("⚠️ currentUser não carregado ainda");
-      return allEmployees;
-    }
-
-    // MASTER vê todos
-    if (currentUser.perfil === "MASTER") {
-      console.log("🔓 Usuário MASTER - acesso a todos os vendedores");
-      return allEmployees;
-    }
-
-    // Outros perfis veem apenas authorized_users
-    const allowedIds = currentUser.authorized_users || [];
-    console.log(`🔒 Perfil ${currentUser.perfil} - pode ver IDs:`, allowedIds);
-
-    // Se não tem permissões específicas, mostra todos (fallback quando API falha)
-    if (allowedIds.length === 0) {
-      console.log(
-        "ℹ️ Sem permissões específicas - mostrando todos os vendedores como fallback"
-      );
-      return allEmployees;
-    }
-
-    const filtered = allEmployees.filter((emp) => {
-      const empId = String(emp.id);
-      return allowedIds.includes(empId);
-    });
-    console.log(
-      `✅ ${filtered.length} vendedores permitidos de ${allEmployees.length} total (IDs convertidos para strings)`
-    );
-    return filtered;
-  }, [allEmployees, currentUser]);
+    return allEmployees;
+  }, [allEmployees]);
 
   // Filtrar apenas vendedores permitidos (sem seleção adicional)
   const employeeList = useMemo(() => {
@@ -385,6 +380,54 @@ export default function Index() {
         <Header onMenuClick={() => setSidebarOpen(true)} userEmail={username} />
 
         <main className="flex-1 overflow-auto p-4 md:p-5 lg:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">
+              Período dos dados
+            </div>
+            <Popover
+              open={calendarOpen}
+              onOpenChange={(open) => {
+                if (!open && (!dateRange.from || !dateRange.to)) {
+                  setCalendarOpen(true);
+                } else {
+                  setCalendarOpen(open);
+                }
+              }}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-72 justify-start text-left font-normal"
+                  onClick={() => setCalendarOpen(true)}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from && dateRange.to
+                    ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(
+                        dateRange.to,
+                        "dd/MM/yyyy"
+                      )}`
+                    : "Selecione o período"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={(range) => {
+                    setDateRange(range ?? {});
+                    if (range?.from && range?.to) {
+                      setCalendarOpen(false);
+                    } else {
+                      setCalendarOpen(true);
+                    }
+                  }}
+                  numberOfMonths={2}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
           {renderContent()}
         </main>
       </div>

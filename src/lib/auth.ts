@@ -1,6 +1,8 @@
 const API_KEY =
   "i7YH9f-Or6D_2HUUR01IRnhH9sE2_bWCk13BYjZOuC-VF9yOPzJG1ZS_IwvIiSzE";
-const API_BASE_URL = "https://ms.moskit.montseguro.link/api";
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
+  "http://127.0.0.1:8000/api";
 
 export interface AuthTokens {
   access: string;

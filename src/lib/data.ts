@@ -33,6 +33,11 @@ export interface Employee {
   id: string;
   name: string;
   picture?: string;
+  implantadosAtual?: number;
+  assinadosAtual?: number;
+  metaImplantados?: number;
+  metaAssinados?: number;
+  ultimaSincronizacao?: string;
   role: CareerLevel;
   path: CareerPath;
   currentDemand: number;
@@ -193,6 +198,44 @@ export function calculateVariablePay(role: RoleConfig, demand: number): number {
   return (variablePercent / 100) * demand;
 }
 
+// Calculate variable pay using production targets (implantados/assinados)
+export function calculateVariableFromTargets(
+  role: RoleConfig,
+  implantadosAtual?: number,
+  metaImplantados?: number,
+  assinadosAtual?: number,
+  metaAssinados?: number
+): number {
+  const progresses: number[] = [];
+
+  if (metaImplantados && metaImplantados > 0) {
+    progresses.push(
+      Math.min(implantadosAtual ?? 0, metaImplantados) / metaImplantados
+    );
+  }
+
+  if (metaAssinados && metaAssinados > 0) {
+    progresses.push(
+      Math.min(assinadosAtual ?? 0, metaAssinados) / metaAssinados
+    );
+  }
+
+  if (progresses.length === 0) {
+    return 0;
+  }
+
+  const averageProgress = Math.min(
+    progresses.reduce((sum, p) => sum + p, 0) / progresses.length,
+    1
+  );
+
+  const variableRange = role.variableMax - role.variableMin;
+  const variablePercent = role.variableMin + variableRange * averageProgress;
+
+  // Variável aplicada sobre o salário base do cargo
+  return (variablePercent / 100) * role.baseSalary;
+}
+
 // Calculate team bonus for technical leaders
 export function calculateTeamBonus(
   teamSize: number,
@@ -250,7 +293,16 @@ export function getHealthCoverage(tenure: number): string {
 export function calculateCompensation(employee: Employee): Compensation {
   const role = ROLES[employee.role];
   const baseSalary = role.baseSalary;
-  const variablePay = calculateVariablePay(role, employee.currentDemand);
+  const variableByTargets = calculateVariableFromTargets(
+    role,
+    employee.implantadosAtual,
+    employee.metaImplantados,
+    employee.assinadosAtual,
+    employee.metaAssinados
+  );
+
+  const variablePay =
+    variableByTargets || calculateVariablePay(role, employee.currentDemand);
 
   let teamBonus = 0;
   let promotionAddOn = 0;

@@ -1,7 +1,9 @@
 import { getAuthHeaders } from "./auth";
 import type { Employee, CareerLevel } from "./data";
 
-const API_BASE_URL = "https://ms.moskit.montseguro.link/api";
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
+  "http://127.0.0.1:8000/api";
 
 /**
  * Busca informações do usuário logado (perfil e permissões)
@@ -143,7 +145,10 @@ export async function fetchCurrentUser(): Promise<{
  * - Master vê TODOS os vendedores
  * - Outros perfis veem APENAS seus vendedores relacionados
  */
-export async function fetchEmployees(): Promise<Employee[]> {
+export async function fetchEmployees(filters?: {
+  startDate?: string;
+  endDate?: string;
+}): Promise<Employee[]> {
   try {
     console.log("🔍 Iniciando busca de vendedores (filtrado por backend)...");
 
@@ -176,19 +181,21 @@ export async function fetchEmployees(): Promise<Employee[]> {
       console.warn("⚠️ Nenhum token disponível para autenticação");
     }
 
-    console.log(
-      "📍 Tentando URL dashboard-summary:",
-      `${API_BASE_URL}/moskit/v1/dashboard-summary/`
-    );
+    const url = new URL(`${API_BASE_URL}/moskit/v1/dashboard-summary/`);
+    if (filters?.startDate) {
+      url.searchParams.set("start_date", filters.startDate);
+    }
+    if (filters?.endDate) {
+      url.searchParams.set("end_date", filters.endDate);
+    }
+
+    console.log("📍 Tentando URL dashboard-summary:", url.toString());
     console.log("📋 Com autenticação:", !!accessToken);
 
-    const response = await fetch(
-      `${API_BASE_URL}/moskit/v1/dashboard-summary/`,
-      {
-        method: "GET",
-        headers,
-      }
-    );
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
 
     console.log(
       "📥 Status dashboard-summary:",
@@ -311,6 +318,11 @@ function mapApiEmployeeToLocal(apiData: Record<string, unknown>): Employee {
     picture: String(
       apiData.picture_url || apiData.picture || apiData.photo || ""
     ),
+    implantadosAtual: Number((apiData as any).implantados_atual ?? 0),
+    assinadosAtual: Number((apiData as any).assinados_atual ?? 0),
+    metaImplantados: Number((apiData as any).meta_implantados ?? 0),
+    metaAssinados: Number((apiData as any).meta_assinados ?? 0),
+    ultimaSincronizacao: String((apiData as any).ultima_sincronizacao || ""),
     role: (apiData.role || "level1") as CareerLevel,
     path:
       apiData.path === "leadership" || apiData.is_manager
