@@ -1,5 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
-
 const API_KEY =
   "i7YH9f-Or6D_2HUUR01IRnhH9sE2_bWCk13BYjZOuC-VF9yOPzJG1ZS_IwvIiSzE";
 const API_BASE_URL = "https://ms.moskit.montseguro.link/api";
@@ -28,34 +26,15 @@ export const getAuthHeaders = (): HeadersInit => {
   return headers;
 };
 
-// Login via Edge Function ou API com workaround
+// Login via API
 export const login = async (
   username: string,
   password: string
 ): Promise<AuthTokens> => {
   console.log("🔍 Iniciando login para:", username);
 
-  // Tentar primeiro com Edge Function
   try {
-    console.log("📤 Tentando Edge Function auth-proxy...");
-    const { data, error } = await supabase.functions.invoke("auth-proxy", {
-      body: { username, password },
-    });
-
-    if (!error && data?.access) {
-      console.log("✅ Login via Edge Function bem-sucedido!");
-      const tokens: AuthTokens = data;
-      saveTokens(tokens);
-      saveUser({ username });
-      return tokens;
-    }
-  } catch (err) {
-    console.log("ℹ️ Edge Function não disponível, tentando alternativa...");
-  }
-
-  // Fallback: Tentar API direta com alternativas
-  try {
-    console.log("📤 Tentando API com Bearer token no header...");
+    console.log("📤 Tentando login via API...");
     const response = await fetch(`${API_BASE_URL}/auth/v1/token/`, {
       method: "POST",
       headers: {
@@ -63,29 +42,6 @@ export const login = async (
         Authorization: `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({ username, password }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log("✅ Login bem-sucedido!");
-      const tokens: AuthTokens = data;
-      saveTokens(tokens);
-      saveUser({ username });
-      return tokens;
-    }
-  } catch (err) {
-    console.log("ℹ️ Tentativa com Bearer também falhou...");
-  }
-
-  // Última tentativa: Sem header customizado
-  try {
-    console.log("📤 Tentativa final sem header customizado...");
-    const response = await fetch(`${API_BASE_URL}/auth/v1/token/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, password, api_key: API_KEY }),
     });
 
     const data = await response.json();
@@ -100,7 +56,7 @@ export const login = async (
       throw new Error(data.detail || "Credenciais inválidas");
     }
   } catch (err) {
-    console.error("❌ Erro completo no login:", err);
+    console.error("❌ Erro na autenticação:", err);
     throw new Error("Erro na autenticação. Verifique suas credenciais.");
   }
 };
