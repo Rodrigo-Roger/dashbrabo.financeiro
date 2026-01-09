@@ -4,14 +4,22 @@ import type { Employee } from "@/lib/data";
 
 /**
  * Hook para buscar lista de todos os funcionários
+ * ⭐ IMPORTANTE: Backend filtra automaticamente por M2M
+ * Só busca se estiver autenticado (tem token)
  */
 export function useEmployees(): UseQueryResult<Employee[], Error> {
+  // Verifica se tem token (está logado)
+  const hasToken = !!localStorage.getItem("auth_tokens");
+
+  console.log("🔍 useEmployees - hasToken:", hasToken, "enabled");
+
   return useQuery({
     queryKey: ["employees"],
     queryFn: fetchEmployees,
     staleTime: 5 * 60 * 1000, // 5 minutos
     retry: 1, // Tentar apenas 1 vez para evitar spam
-    enabled: true,
+    enabled: hasToken, // ⭐ Só busca se está logado
+    refetchOnWindowFocus: false,
   });
 }
 

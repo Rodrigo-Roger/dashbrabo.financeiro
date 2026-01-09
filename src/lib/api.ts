@@ -101,10 +101,10 @@ export async function fetchCurrentUser(): Promise<{
         if (permissionResponse.ok) {
           const allowedUsers = await permissionResponse.json();
           user.authorized_users = Array.isArray(allowedUsers)
-            ? allowedUsers.map((u: any) => u.id || u.moskit_id)
+            ? allowedUsers.map((u: any) => String(u.id || u.moskit_id))
             : [];
           console.log(
-            "✅ Usuários permitidos encontrados:",
+            "✅ Usuários permitidos encontrados (como strings):",
             user.authorized_users
           );
         } else {
@@ -139,50 +139,120 @@ export async function fetchCurrentUser(): Promise<{
 
 /**
  * Busca todos os vendedores/funcionários da API
+ * ⭐ IMPORTANTE: Backend filtra automaticamente por M2M
+ * - Master vê TODOS os vendedores
+ * - Outros perfis veem APENAS seus vendedores relacionados
  */
 export async function fetchEmployees(): Promise<Employee[]> {
   try {
-    console.log("🔍 Iniciando busca de vendedores...");
-    console.log("📍 URL:", `${API_BASE_URL}/moskit/v1/users/`);
+    console.log("🔍 Iniciando busca de vendedores (filtrado por backend)...");
 
-    // Tenta sem X-API-Key para evitar CORS preflight
-    const token = localStorage.getItem("access_token");
+    // Recupera token dos auth_tokens (não access_token direto)
+    const storedTokens = localStorage.getItem("auth_tokens");
+    let accessToken = "";
+
+    if (storedTokens) {
+      try {
+        const parsed = JSON.parse(storedTokens);
+        accessToken = parsed.access || "";
+        console.log(
+          "✅ Token recuperado de auth_tokens (primeiros 20 chars):",
+          accessToken.substring(0, 20) + "..."
+        );
+      } catch (e) {
+        console.warn("⚠️ Não foi possível parsear auth_tokens:", e);
+      }
+    } else {
+      console.warn("⚠️ auth_tokens não encontrado no localStorage");
+    }
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    } else {
+      console.warn("⚠️ Nenhum token disponível para autenticação");
     }
 
-    console.log("📋 Headers (sem X-API-Key para evitar CORS):", headers);
+    console.log(
+      "📍 Tentando URL dashboard-summary:",
+      `${API_BASE_URL}/moskit/v1/dashboard-summary/`
+    );
+    console.log("📋 Com autenticação:", !!accessToken);
 
-    const response = await fetch(`${API_BASE_URL}/moskit/v1/users/`, {
-      method: "GET",
-      headers,
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/moskit/v1/dashboard-summary/`,
+      {
+        method: "GET",
+        headers,
+      }
+    );
 
-    console.log("📥 Status da resposta:", response.status, response.statusText);
+    console.log(
+      "📥 Status dashboard-summary:",
+      response.status,
+      response.statusText
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("❌ Erro na API:", errorData);
-      throw new Error(
-        errorData.detail || `Erro ao buscar vendedores: ${response.status}`
+      console.error("❌ Dashboard-summary falhou:", response.status, errorData);
+
+      // Se falhar, tenta fallback com /users/ (endpoint que sempre existe)
+      console.log("⚠️ Tentando fallback para /moskit/v1/users/");
+      const fallbackResponse = await fetch(`${API_BASE_URL}/moskit/v1/users/`, {
+        method: "GET",
+        headers,
+      });
+
+      console.log("📥 Status fallback /users/:", fallbackResponse.status);
+
+      if (!fallbackResponse.ok) {
+        const fallbackError = await fallbackResponse.json().catch(() => ({}));
+        console.error(
+          "❌ Fallback também falhou:",
+          fallbackResponse.status,
+          fallbackError
+        );
+        throw new Error(
+          fallbackError.detail ||
+            `Erro ao buscar vendedores: ${response.status}`
+        );
+      }
+
+      const fallbackData = await fallbackResponse.json();
+      console.log(
+        "✅ Dados do fallback:",
+        Array.isArray(fallbackData)
+          ? `${fallbackData.length} vendedores`
+          : fallbackData
       );
+      const result = mapApiEmployeesToLocal(fallbackData);
+      console.log("✅ Vendedores mapeados (fallback):", result.length, "itens");
+      return result;
     }
 
     const data = await response.json();
-    console.log("📊 Dados brutos da API:", data);
     console.log(
-      "📊 Tipo de dados:",
+      "✅ Dashboard-summary retornou:",
+      Array.isArray(data) ? `${data.length} vendedores` : typeof data
+    );
+    console.log(
+      "📊 Resposta completa (primeiros 500 chars):",
+      JSON.stringify(data).substring(0, 500)
+    );
+    console.log(
+      "📊 Tipo da resposta:",
       typeof data,
-      Array.isArray(data) ? "é array" : "não é array"
+      "É array?",
+      Array.isArray(data)
     );
 
     // Mapear resposta da API para o formato esperado
     const result = mapApiEmployeesToLocal(data);
-    console.log("✅ Vendedores mapeados:", result);
+    console.log("✅ Vendedores mapeados:", result.length, "itens");
     return result;
   } catch (error) {
     console.error("❌ Erro ao buscar funcionários:", error);
@@ -225,7 +295,8 @@ function mapApiEmployeeToLocal(apiData: Record<string, unknown>): Employee {
 
   // Tentar extrair nome de várias possíveis localizações
   const name = String(
-    apiData.name ||
+    apiData.nome ||
+      apiData.name ||
       apiData.full_name ||
       apiData.username ||
       apiData.email?.split("@")[0] ||
@@ -237,6 +308,9 @@ function mapApiEmployeeToLocal(apiData: Record<string, unknown>): Employee {
   return {
     id,
     name,
+    picture: String(
+      apiData.picture_url || apiData.picture || apiData.photo || ""
+    ),
     role: (apiData.role || "level1") as CareerLevel,
     path:
       apiData.path === "leadership" || apiData.is_manager
@@ -266,22 +340,54 @@ function mapApiEmployeeToLocal(apiData: Record<string, unknown>): Employee {
  * Mapeia lista de funcionários da API para formato local
  */
 function mapApiEmployeesToLocal(
-  apiDataList: Record<string, unknown>[]
+  apiDataList: Record<string, unknown>[] | Record<string, unknown>
 ): Employee[] {
+  // Se não é array, tenta extrair array de propriedades comuns
   if (!Array.isArray(apiDataList)) {
-    console.warn("⚠️ Resposta não é um array:", apiDataList);
-    // Tenta extrair array se estiver dentro de um objeto
+    console.warn("⚠️ Resposta não é um array direto:", typeof apiDataList);
+
     if (typeof apiDataList === "object" && apiDataList !== null) {
-      const arrayData = Object.values(apiDataList).find((v) =>
-        Array.isArray(v)
-      );
-      if (arrayData) {
-        console.log("📊 Array encontrado em propriedade:", arrayData);
-        return (arrayData as Record<string, unknown>[])
-          .map(mapApiEmployeeToLocal)
-          .filter((emp) => emp.id);
+      // Tenta propriedades comuns que APIs paginated usam
+      let arrayData: any[] | null = null;
+
+      if (Array.isArray((apiDataList as any).results)) {
+        arrayData = (apiDataList as any).results;
+        console.log(
+          "✅ Array encontrado em propriedade 'results':",
+          arrayData.length
+        );
+      } else if (Array.isArray((apiDataList as any).data)) {
+        arrayData = (apiDataList as any).data;
+        console.log(
+          "✅ Array encontrado em propriedade 'data':",
+          arrayData.length
+        );
+      } else if (Array.isArray((apiDataList as any).items)) {
+        arrayData = (apiDataList as any).items;
+        console.log(
+          "✅ Array encontrado em propriedade 'items':",
+          arrayData.length
+        );
+      } else {
+        // Procura por qualquer propriedade que seja um array
+        for (const [key, value] of Object.entries(apiDataList)) {
+          if (Array.isArray(value)) {
+            arrayData = value;
+            console.log(
+              `✅ Array encontrado em propriedade '${key}':`,
+              arrayData.length
+            );
+            break;
+          }
+        }
+      }
+
+      if (arrayData && arrayData.length > 0) {
+        return arrayData.map(mapApiEmployeeToLocal).filter((emp) => emp.id);
       }
     }
+
+    console.warn("⚠️ Nenhum array encontrado na resposta");
     return [];
   }
 

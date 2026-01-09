@@ -7,7 +7,6 @@ import {
   DollarSign,
   Loader2,
   AlertCircle,
-  Settings,
 } from "lucide-react";
 import {
   SAMPLE_EMPLOYEES,
@@ -28,8 +27,6 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { RolesGoalsView } from "@/components/dashboard/RolesGoalsView";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
-import { VendorSelectionModal } from "@/components/dashboard/VendorSelectionModal";
-import { Button } from "@/components/ui/button";
 
 // Sample revenue data for chart
 const sampleRevenueData = [
@@ -45,34 +42,32 @@ export default function Index() {
   const navigate = useNavigate();
   const [username, setUsername] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState("financial");
+  const [activeView, setActiveView] = useState("team");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
     null
   );
   const [fallbackToSample, setFallbackToSample] = useState(false);
-  const [selectionModalOpen, setSelectionModalOpen] = useState(false);
-  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>(() => {
-    const stored = localStorage.getItem("selectedVendorIds");
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
 
   // Buscar funcionários da API
-  const { data: employees, isLoading, error } = useEmployees();
+  const {
+    data: employees,
+    isLoading,
+    error,
+    status: employeeStatus,
+  } = useEmployees();
 
   // Buscar informações do usuário logado (perfil e permissões)
-  const { data: currentUser } = useCurrentUser();
+  const { data: currentUser, status: userStatus } = useCurrentUser();
 
   useEffect(() => {
-    console.log("📊 Estado dos funcionários:", { employees, isLoading, error });
-    console.log("👤 Usuário logado:", currentUser);
-  }, [employees, isLoading, error, currentUser]);
+    console.log("📊 Estado dos funcionários:", {
+      employees,
+      isLoading,
+      error,
+      status: employeeStatus,
+    });
+    console.log("👤 Usuário logado:", currentUser, "Status:", userStatus);
+  }, [employees, isLoading, error, currentUser, employeeStatus, userStatus]);
 
   useEffect(() => {
     // Verificar autenticação
@@ -94,7 +89,13 @@ export default function Index() {
 
   // Vendedores que o usuário tem permissão para ver (baseado no Django)
   const allowedEmployees = useMemo(() => {
+    console.log("🔄 Calculando allowedEmployees...", {
+      allEmployees: allEmployees?.length,
+      currentUser: currentUser?.perfil,
+    });
+
     if (!currentUser) {
+      console.log("⚠️ currentUser não carregado ainda");
       return allEmployees;
     }
 
@@ -116,49 +117,25 @@ export default function Index() {
       return allEmployees;
     }
 
-    return allEmployees.filter((emp) => allowedIds.includes(emp.id));
+    const filtered = allEmployees.filter((emp) => {
+      const empId = String(emp.id);
+      return allowedIds.includes(empId);
+    });
+    console.log(
+      `✅ ${filtered.length} vendedores permitidos de ${allEmployees.length} total (IDs convertidos para strings)`
+    );
+    return filtered;
   }, [allEmployees, currentUser]);
 
-  // Filtrar apenas vendedores selecionados (se houver seleção)
+  // Filtrar apenas vendedores permitidos (sem seleção adicional)
   const employeeList = useMemo(() => {
-    if (selectedVendorIds.length === 0) {
-      return allowedEmployees;
-    }
-    // Garante que só mostre vendedores permitidos E selecionados
-    return allowedEmployees.filter((emp) => selectedVendorIds.includes(emp.id));
-  }, [allowedEmployees, selectedVendorIds]);
-
-  // Inicializar seleção com vendedores permitidos se estiver vazia
-  useEffect(() => {
-    if (allowedEmployees.length > 0 && selectedVendorIds.length === 0) {
-      const allowedIds = allowedEmployees.map((emp) => emp.id);
-      setSelectedVendorIds(allowedIds);
-      localStorage.setItem("selectedVendorIds", JSON.stringify(allowedIds));
-      console.log(
-        "✅ Seleção inicializada com vendedores permitidos:",
-        allowedIds
-      );
-    }
-  }, [allowedEmployees.length, selectedVendorIds.length]);
-
-  // Limpar seleção se vendedores permitidos mudarem (ex: troca de usuário)
-  useEffect(() => {
-    if (currentUser && selectedVendorIds.length > 0) {
-      const allowedIds = allowedEmployees.map((emp) => emp.id);
-      const validSelection = selectedVendorIds.filter((id) =>
-        allowedIds.includes(id)
-      );
-
-      if (validSelection.length !== selectedVendorIds.length) {
-        console.log("⚠️ Ajustando seleção para vendedores permitidos");
-        setSelectedVendorIds(validSelection);
-        localStorage.setItem(
-          "selectedVendorIds",
-          JSON.stringify(validSelection)
-        );
-      }
-    }
-  }, [currentUser, allowedEmployees, selectedVendorIds]);
+    console.log(
+      "📋 employeeList recalculado:",
+      allowedEmployees?.length || 0,
+      "vendedores"
+    );
+    return allowedEmployees;
+  }, [allowedEmployees]);
 
   // Definir primeiro funcionário quando a lista carregar
   useEffect(() => {
@@ -167,26 +144,7 @@ export default function Index() {
     }
   }, [employeeList, selectedEmployeeId]);
 
-  // Salvar seleção de vendedores
-  const handleSaveVendorSelection = (ids: string[]) => {
-    setSelectedVendorIds(ids);
-    localStorage.setItem("selectedVendorIds", JSON.stringify(ids));
-    console.log("✅ Seleção salva:", ids);
-    // Se o vendedor selecionado não estiver na nova lista, selecionar o primeiro
-    if (
-      ids.length > 0 &&
-      selectedEmployeeId &&
-      !ids.includes(selectedEmployeeId)
-    ) {
-      const firstSelectedEmployee = allowedEmployees.find((emp) =>
-        ids.includes(emp.id)
-      );
-      if (firstSelectedEmployee) {
-        setSelectedEmployeeId(firstSelectedEmployee.id);
-      }
-    }
-  };
-
+  // Selecionar funcionário atual
   const selectedEmployee = useMemo(
     () =>
       employeeList.find((e) => e.id === selectedEmployeeId) || employeeList[0],
@@ -246,7 +204,30 @@ export default function Index() {
                 Acompanhe a performance de todos os colaboradores
               </p>
             </div>
-            <TeamOverview employees={employeeList} />
+
+            {isLoading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">
+                    Carregando vendedores...
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {employeeList.length === 0 && !isLoading && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Nenhum vendedor disponível para sua conta.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {employeeList.length > 0 && (
+              <TeamOverview employees={employeeList} />
+            )}
           </div>
         );
 
@@ -404,55 +385,9 @@ export default function Index() {
         <Header onMenuClick={() => setSidebarOpen(true)} userEmail={username} />
 
         <main className="flex-1 overflow-auto p-4 md:p-5 lg:p-6">
-          {/* Botão para abrir modal de seleção */}
-          <div className="mb-4 flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              {selectedVendorIds.length === allowedEmployees.length ? (
-                <span>
-                  Exibindo todos os vendedores permitidos (
-                  {allowedEmployees.length})
-                  {currentUser?.perfil && currentUser.perfil !== "MASTER" && (
-                    <span className="ml-2 text-xs text-orange-600">
-                      • Perfil: {currentUser.perfil}
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span>
-                  Exibindo {employeeList.length} de {allowedEmployees.length}{" "}
-                  vendedores
-                  {currentUser?.perfil && currentUser.perfil !== "MASTER" && (
-                    <span className="ml-2 text-xs text-orange-600">
-                      • Perfil: {currentUser.perfil}
-                    </span>
-                  )}
-                </span>
-              )}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectionModalOpen(true)}
-              className="gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Selecionar Vendedores
-            </Button>
-          </div>
-
           {renderContent()}
         </main>
       </div>
-
-      {/* Modal de Seleção */}
-      <VendorSelectionModal
-        employees={allowedEmployees}
-        open={selectionModalOpen}
-        onOpenChange={setSelectionModalOpen}
-        selectedIds={selectedVendorIds}
-        onSave={handleSaveVendorSelection}
-        userProfile={currentUser?.perfil}
-      />
     </div>
   );
 }

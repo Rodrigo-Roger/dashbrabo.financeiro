@@ -18,9 +18,9 @@ export const getAuthHeaders = (): HeadersInit => {
   const tokens = getTokens();
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    "X-API-Key": API_KEY,
   };
 
+  // ⭐ Usar APENAS Bearer token, sem X-API-Key
   if (tokens?.access) {
     headers["Authorization"] = `Bearer ${tokens.access}`;
   }
