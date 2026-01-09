@@ -144,6 +144,11 @@ export async function fetchCurrentUser(): Promise<{
  * ⭐ IMPORTANTE: Backend filtra automaticamente por M2M
  * - Master vê TODOS os vendedores
  * - Outros perfis veem APENAS seus vendedores relacionados
+ *
+ * 📅 FILTRO POR DATA DE FECHAMENTO:
+ * - Usa close_date (data de fechamento dos deals/implantados)
+ * - Reflete nos valores de implantados_atual
+ * - Impacta cálculo da variável dos vendedores
  */
 export async function fetchEmployees(filters?: {
   startDate?: string;
@@ -359,6 +364,15 @@ function mapApiEmployeesToLocal(
     console.warn("⚠️ Resposta não é um array direto:", typeof apiDataList);
 
     if (typeof apiDataList === "object" && apiDataList !== null) {
+      // Log da estrutura paginada (count, next, previous, results)
+      if ("count" in apiDataList) {
+        console.log(
+          `📊 Resposta paginada: ${apiDataList.count} total, próxima: ${
+            (apiDataList as any).next ? "sim" : "não"
+          }`
+        );
+      }
+
       // Tenta propriedades comuns que APIs paginated usam
       let arrayData: any[] | null = null;
 

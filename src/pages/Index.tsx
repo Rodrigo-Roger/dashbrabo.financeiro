@@ -7,6 +7,8 @@ import {
   DollarSign,
   Loader2,
   AlertCircle,
+  X,
+  Search,
 } from "lucide-react";
 import {
   SAMPLE_EMPLOYEES,
@@ -27,6 +29,7 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { RolesGoalsView } from "@/components/dashboard/RolesGoalsView";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
+import { ImplantedTotals } from "@/components/dashboard/ImplantedTotals";
 import {
   Select,
   SelectContent,
@@ -43,13 +46,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ptBR } from "date-fns/locale";
 
 // Sample revenue data for chart
 const sampleRevenueData = [
@@ -71,6 +68,14 @@ export default function Index() {
   );
   const [fallbackToSample, setFallbackToSample] = useState(false);
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [tempDateRange, setTempDateRange] = useState<{
+    from?: Date;
+    to?: Date;
+  }>({});
+  const [appliedFilters, setAppliedFilters] = useState<{
+    startDate?: string;
+    endDate?: string;
+  }>({});
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Buscar funcionários da API
@@ -79,12 +84,8 @@ export default function Index() {
     isLoading,
     error,
     status: employeeStatus,
-  } = useEmployees({
-    startDate: dateRange.from
-      ? format(dateRange.from, "yyyy-MM-dd")
-      : undefined,
-    endDate: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-  });
+    refetch,
+  } = useEmployees(appliedFilters);
 
   // Buscar informações do usuário logado (perfil e permissões)
   const { data: currentUser, status: userStatus } = useCurrentUser();
@@ -256,6 +257,21 @@ export default function Index() {
           </div>
         );
 
+      case "implanted":
+        return (
+          <div className="space-y-5">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                Total Implantados
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Acompanhe o progresso de implantações por vendedor
+              </p>
+            </div>
+            <ImplantedTotals employees={employeeList} />
+          </div>
+        );
+
       case "simulator":
         return (
           <div className="space-y-5">
@@ -380,52 +396,120 @@ export default function Index() {
         <Header onMenuClick={() => setSidebarOpen(true)} userEmail={username} />
 
         <main className="flex-1 overflow-auto p-4 md:p-5 lg:p-6">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-muted-foreground">
-              Período dos dados
-            </div>
-            <Popover
-              open={calendarOpen}
-              onOpenChange={(open) => {
-                if (!open && (!dateRange.from || !dateRange.to)) {
-                  setCalendarOpen(true);
-                } else {
-                  setCalendarOpen(open);
-                }
-              }}
-            >
-              <PopoverTrigger asChild>
+          {/* Card Container do Filtro */}
+          <div className="bg-card p-4 rounded-xl border shadow-sm mb-4">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="text-sm font-medium text-muted-foreground">
+                Período dos dados
+              </div>
+
+              <div className="flex gap-2 w-full md:w-auto">
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-w-[280px] justify-between bg-background hover:bg-muted"
+                    >
+                      <span className="text-sm">
+                        {dateRange.from && dateRange.to
+                          ? `${format(dateRange.from, "dd/MM/yyyy", {
+                              locale: ptBR,
+                            })} - ${format(dateRange.to, "dd/MM/yyyy", {
+                              locale: ptBR,
+                            })}`
+                          : "Selecione o período"}
+                      </span>
+                      <CalendarIcon className="ml-2 h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="range"
+                      locale={ptBR}
+                      selected={tempDateRange}
+                      onSelect={(range) => {
+                        console.log("📅 Data selecionada:", range);
+                        if (range) {
+                          setTempDateRange(range);
+                        }
+                      }}
+                      numberOfMonths={2}
+                      initialFocus
+                      captionLayout="dropdown-buttons"
+                      fromYear={2020}
+                      toYear={2030}
+                    />
+                    <div className="flex gap-2 p-3 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setTempDateRange({});
+                          setCalendarOpen(false);
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-primary hover:bg-primary/90"
+                        onClick={() => {
+                          setDateRange(tempDateRange);
+                          setCalendarOpen(false);
+                        }}
+                        disabled={!tempDateRange.from || !tempDateRange.to}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {dateRange.from && dateRange.to && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDateRange({});
+                      setTempDateRange({});
+                      setAppliedFilters({});
+                      console.log("🧹 Limpando filtros");
+                    }}
+                    title="Limpar filtro"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+
                 <Button
-                  variant="outline"
-                  className="w-full sm:w-72 justify-start text-left font-normal"
-                  onClick={() => setCalendarOpen(true)}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange.from && dateRange.to
-                    ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(
-                        dateRange.to,
-                        "dd/MM/yyyy"
-                      )}`
-                    : "Selecione o período"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={(range) => {
-                    setDateRange(range ?? {});
-                    if (range?.from && range?.to) {
-                      setCalendarOpen(false);
-                    } else {
-                      setCalendarOpen(true);
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90 gap-2"
+                  onClick={() => {
+                    if (dateRange.from && dateRange.to) {
+                      const filters = {
+                        startDate: format(dateRange.from, "yyyy-MM-dd"),
+                        endDate: format(dateRange.to, "yyyy-MM-dd"),
+                      };
+                      console.log(
+                        "🔎 Botão Filtrar clicado! Aplicando filtros:",
+                        filters
+                      );
+                      setAppliedFilters(filters);
+                      console.log(
+                        "✅ appliedFilters atualizado para:",
+                        filters
+                      );
                     }
                   }}
-                  numberOfMonths={2}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+                  disabled={!dateRange.from || !dateRange.to}
+                >
+                  <Search className="h-4 w-4" />
+                  Filtrar
+                </Button>
+              </div>
+            </div>
           </div>
 
           {renderContent()}

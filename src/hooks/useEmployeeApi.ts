@@ -7,18 +7,29 @@ import type { Employee } from "@/lib/data";
  * ⭐ IMPORTANTE: Backend filtra automaticamente por M2M
  * Só busca se estiver autenticado (tem token)
  */
-export function useEmployees(): UseQueryResult<Employee[], Error> {
+export function useEmployees(filters?: {
+  startDate?: string;
+  endDate?: string;
+}): UseQueryResult<Employee[], Error> {
   // Verifica se tem token (está logado)
   const hasToken = !!localStorage.getItem("auth_tokens");
 
-  console.log("🔍 useEmployees - hasToken:", hasToken, "enabled");
+  console.log(
+    "🔍 useEmployees chamado - hasToken:",
+    hasToken,
+    "filters:",
+    filters
+  );
 
   return useQuery({
-    queryKey: ["employees"],
-    queryFn: fetchEmployees,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    retry: 1, // Tentar apenas 1 vez para evitar spam
-    enabled: hasToken, // ⭐ Só busca se está logado
+    queryKey: ["employees", filters?.startDate, filters?.endDate],
+    queryFn: () => {
+      console.log("🌐 Executando fetchEmployees com filtros:", filters);
+      return fetchEmployees(filters);
+    },
+    staleTime: 0, // ⭐ Sempre refazer quando filtros mudarem
+    retry: 1,
+    enabled: hasToken,
     refetchOnWindowFocus: false,
   });
 }
