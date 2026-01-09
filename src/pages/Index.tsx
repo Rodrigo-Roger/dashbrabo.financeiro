@@ -272,7 +272,7 @@ export default function Index() {
                 Defina cargos e visualize as metas correspondentes
               </p>
             </div>
-            <RolesGoalsView />
+            <RolesGoalsView employees={employeeList} />
           </div>
         );
 
