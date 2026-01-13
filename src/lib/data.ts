@@ -77,6 +77,7 @@ export const ROLES: Record<CareerLevel, RoleConfig> = {
     demandMax: 10000,
     description: "Entrada - Foco em onboarding e aprendizado",
   },
+  
   level2: {
     id: "level2",
     name: "Nível 2",
@@ -198,7 +199,8 @@ export function calculateVariablePay(role: RoleConfig, demand: number): number {
   return (variablePercent / 100) * demand;
 }
 
-// Calculate variable pay using production targets (implantados/assinados)
+// Calculate variable pay using production targets (implantados only)
+// Segue a regra: Variável = X% a Y% da demanda (implantados)
 export function calculateVariableFromTargets(
   role: RoleConfig,
   implantadosAtual?: number,
@@ -206,34 +208,30 @@ export function calculateVariableFromTargets(
   assinadosAtual?: number,
   metaAssinados?: number
 ): number {
-  const progresses: number[] = [];
+  // Usa apenas implantados como "demanda" para o cálculo
+  const demandValue = implantadosAtual || 0;
 
-  if (metaImplantados && metaImplantados > 0) {
-    progresses.push(
-      Math.min(implantadosAtual ?? 0, metaImplantados) / metaImplantados
-    );
-  }
-
-  if (metaAssinados && metaAssinados > 0) {
-    progresses.push(
-      Math.min(assinadosAtual ?? 0, metaAssinados) / metaAssinados
-    );
-  }
-
-  if (progresses.length === 0) {
+  if (demandValue === 0) {
     return 0;
   }
 
-  const averageProgress = Math.min(
-    progresses.reduce((sum, p) => sum + p, 0) / progresses.length,
-    1
+  // Se o cargo não tem faixa de variável definida, retorna 0
+  if (role.demandMin === undefined || role.demandMax === undefined) {
+    return 0;
+  }
+
+  // Calcula o percentual de variável baseado na posição entre demandMin e demandMax
+  const demandRange = role.demandMax - role.demandMin;
+  const demandPosition = Math.min(
+    Math.max(demandValue - role.demandMin, 0),
+    demandRange
   );
-
   const variableRange = role.variableMax - role.variableMin;
-  const variablePercent = role.variableMin + variableRange * averageProgress;
+  const variablePercent =
+    role.variableMin + (demandPosition / demandRange) * variableRange;
 
-  // Variável aplicada sobre o salário base do cargo
-  return (variablePercent / 100) * role.baseSalary;
+  // Variável = percentual × valor de implantados
+  return (variablePercent / 100) * demandValue;
 }
 
 // Calculate team bonus for technical leaders
@@ -293,16 +291,22 @@ export function getHealthCoverage(tenure: number): string {
 export function calculateCompensation(employee: Employee): Compensation {
   const role = ROLES[employee.role];
   const baseSalary = role.baseSalary;
-  const variableByTargets = calculateVariableFromTargets(
-    role,
-    employee.implantadosAtual,
-    employee.metaImplantados,
-    employee.assinadosAtual,
-    employee.metaAssinados
-  );
 
-  const variablePay =
-    variableByTargets || calculateVariablePay(role, employee.currentDemand);
+  let variablePay = 0;
+
+  // PRIORIDADE: Sempre usar implantados se disponível
+  if (employee.implantadosAtual) {
+    variablePay = calculateVariableFromTargets(
+      role,
+      employee.implantadosAtual,
+      employee.metaImplantados,
+      employee.assinadosAtual,
+      employee.metaAssinados
+    );
+  } else {
+    // FALLBACK: Só usa currentDemand se não tiver implantados
+    variablePay = calculateVariablePay(role, employee.currentDemand);
+  }
 
   let teamBonus = 0;
   let promotionAddOn = 0;
