@@ -77,7 +77,7 @@ export const ROLES: Record<CareerLevel, RoleConfig> = {
     demandMax: 10000,
     description: "Entrada - Foco em onboarding e aprendizado",
   },
-  
+
   level2: {
     id: "level2",
     name: "Nível 2",
@@ -201,6 +201,7 @@ export function calculateVariablePay(role: RoleConfig, demand: number): number {
 
 // Calculate variable pay using production targets (implantados only)
 // Segue a regra: Variável = X% a Y% da demanda (implantados)
+// Usa faixas fixas de percentual baseadas no valor atingido
 export function calculateVariableFromTargets(
   role: RoleConfig,
   implantadosAtual?: number,
@@ -220,17 +221,23 @@ export function calculateVariableFromTargets(
     return 0;
   }
 
-  // Calcula o percentual de variável baseado na posição entre demandMin e demandMax
-  const demandRange = role.demandMax - role.demandMin;
-  const demandPosition = Math.min(
-    Math.max(demandValue - role.demandMin, 0),
-    demandRange
-  );
-  const variableRange = role.variableMax - role.variableMin;
-  const variablePercent =
-    role.variableMin + (demandPosition / demandRange) * variableRange;
+  // Determina o percentual fixo baseado em faixas de valor
+  let variablePercent = role.variableMin;
 
-  // Variável = percentual × valor de implantados
+  // Se atingiu o máximo da demanda, usa o percentual máximo
+  if (demandValue >= role.demandMax) {
+    variablePercent = role.variableMax;
+  }
+  // Se está entre o mínimo e máximo, usa o percentual mínimo
+  else if (demandValue >= role.demandMin) {
+    variablePercent = role.variableMin;
+  }
+  // Se está abaixo do mínimo, usa o percentual mínimo
+  else {
+    variablePercent = role.variableMin;
+  }
+
+  // Variável = percentual fixo × valor de implantados
   return (variablePercent / 100) * demandValue;
 }
 
