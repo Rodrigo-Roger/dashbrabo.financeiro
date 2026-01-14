@@ -64,8 +64,10 @@ export interface Benefit {
   eligible: boolean;
 }
 
+export type RoleMap = Record<CareerLevel, RoleConfig>;
+
 // Role configurations based on business rules
-export const ROLES: Record<CareerLevel, RoleConfig> = {
+export const ROLES: RoleMap = {
   level1: {
     id: "level1",
     name: "Nível 1",
@@ -295,8 +297,11 @@ export function getHealthCoverage(tenure: number): string {
 }
 
 // Calculate total compensation
-export function calculateCompensation(employee: Employee): Compensation {
-  const role = ROLES[employee.role];
+export function calculateCompensation(
+  employee: Employee,
+  rolesMap?: RoleMap
+): Compensation {
+  const role = (rolesMap ?? ROLES)[employee.role];
   const baseSalary = role.baseSalary;
 
   let variablePay = 0;

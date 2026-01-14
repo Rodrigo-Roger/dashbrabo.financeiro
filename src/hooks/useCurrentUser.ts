@@ -6,7 +6,6 @@ import { fetchCurrentUser } from "@/lib/api";
  */
 export function useCurrentUser() {
   const hasToken = !!localStorage.getItem("auth_tokens");
-  console.log("🔍 useCurrentUser - hasToken:", hasToken);
 
   return useQuery({
     queryKey: ["currentUser"],

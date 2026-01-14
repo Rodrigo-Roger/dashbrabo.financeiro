@@ -1,6 +1,12 @@
 import { cn } from "@/lib/utils";
 import { Target, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { ROLES, CareerLevel, formatCurrency, getPerformanceStatus } from "@/lib/data";
+import {
+  ROLES,
+  CareerLevel,
+  formatCurrency,
+  getPerformanceStatus,
+  type RoleMap,
+} from "@/lib/data";
 import { ProgressBar } from "./ProgressBar";
 import { StatusBadge } from "./StatusBadge";
 
@@ -8,31 +14,47 @@ interface GoalTrackerProps {
   level: CareerLevel;
   quarterlyRevenue: number;
   className?: string;
+  rolesMap?: RoleMap;
 }
 
-export function GoalTracker({ level, quarterlyRevenue, className }: GoalTrackerProps) {
-  const role = ROLES[level];
-  const status = getPerformanceStatus(quarterlyRevenue, role.quarterlyStay, role.quarterlyPromotion);
-  
+export function GoalTracker({
+  level,
+  quarterlyRevenue,
+  className,
+  rolesMap = ROLES,
+}: GoalTrackerProps) {
+  const role = rolesMap[level];
+  const status = getPerformanceStatus(
+    quarterlyRevenue,
+    role.quarterlyStay,
+    role.quarterlyPromotion
+  );
+
   const hasGoals = role.quarterlyStay || role.quarterlyPromotion;
-  
+
   return (
-    <div className={cn("rounded-lg border border-border bg-card p-5", className)}>
+    <div
+      className={cn("rounded-lg border border-border bg-card p-5", className)}
+    >
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Metas Trimestrais
         </h3>
         <StatusBadge status={status} />
       </div>
-      
+
       {hasGoals ? (
         <div className="space-y-5">
           {/* Current Revenue */}
           <div className="rounded-md bg-secondary/50 p-3">
-            <p className="text-xs text-muted-foreground mb-0.5">Receita Atual</p>
-            <p className="text-xl font-semibold text-foreground">{formatCurrency(quarterlyRevenue)}</p>
+            <p className="text-xs text-muted-foreground mb-0.5">
+              Receita Atual
+            </p>
+            <p className="text-xl font-semibold text-foreground">
+              {formatCurrency(quarterlyRevenue)}
+            </p>
           </div>
-          
+
           {/* Stay Goal */}
           {role.quarterlyStay && (
             <div className="space-y-2">
@@ -56,7 +78,7 @@ export function GoalTracker({ level, quarterlyRevenue, className }: GoalTrackerP
               />
             </div>
           )}
-          
+
           {/* Promotion Goal */}
           {role.quarterlyPromotion && (
             <div className="space-y-2">
@@ -89,9 +111,7 @@ export function GoalTracker({ level, quarterlyRevenue, className }: GoalTrackerP
       ) : (
         <div className="flex flex-col items-center justify-center py-6 text-center">
           <Target className="h-8 w-8 text-muted-foreground/30 mb-2" />
-          <p className="text-sm text-muted-foreground">
-            Sem metas definidas
-          </p>
+          <p className="text-sm text-muted-foreground">Sem metas definidas</p>
         </div>
       )}
     </div>

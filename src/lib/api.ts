@@ -1,9 +1,26 @@
 import { getAuthHeaders } from "./auth";
-import type { Employee, CareerLevel } from "./data";
+import type { CareerLevel, CareerPath, Employee } from "./data";
+
+type ApiUnknown = Record<string, unknown>;
 
 const API_BASE_URL =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
   "http://127.0.0.1:8000/api";
+
+export interface ApiRole {
+  id: CareerLevel;
+  name: string;
+  path: CareerPath;
+  baseSalary: number;
+  variableMin?: number;
+  variableMax?: number;
+  demandMin?: number;
+  demandMax?: number;
+  quarterlyStay?: number;
+  quarterlyPromotion?: number;
+  description?: string;
+  isActive?: boolean;
+}
 
 /**
  * Busca informações do usuário logado (perfil e permissões)
@@ -103,7 +120,10 @@ export async function fetchCurrentUser(): Promise<{
         if (permissionResponse.ok) {
           const allowedUsers = await permissionResponse.json();
           user.authorized_users = Array.isArray(allowedUsers)
-            ? allowedUsers.map((u: any) => String(u.id || u.moskit_id))
+            ? allowedUsers.map((u: ApiUnknown) => {
+                const candidate = u.id ?? (u as ApiUnknown).moskit_id;
+                return String(candidate ?? "");
+              })
             : [];
           console.log(
             "✅ Usuários permitidos encontrados (como strings):",
@@ -135,6 +155,91 @@ export async function fetchCurrentUser(): Promise<{
     return user;
   } catch (error) {
     console.error("❌ Erro ao buscar usuário logado:", error);
+    throw error;
+  }
+}
+
+/**
+ * Busca lista de cargos da API
+ */
+export async function fetchRoles(): Promise<ApiRole[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/moskit/v1/roles/`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.detail || `Erro ao buscar cargos: ${response.status}`
+      );
+    }
+
+    const payload = await response.json();
+
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.results)
+      ? payload.results
+      : [];
+
+    console.log(
+      "✅ Cargos recebidos:",
+      Array.isArray(list) ? `${list.length} itens` : typeof list
+    );
+    return list
+      .map((role) => {
+        const r = role as ApiUnknown;
+        const id = (r.id || r.role_id || r.slug || r.pk || "") as CareerLevel;
+        const name = String(r.name ?? "");
+        const path: CareerPath =
+          r.path === "leadership" ? "leadership" : "specialist";
+
+        const baseSalary = Number(r.base_salary ?? r.baseSalary ?? 0);
+        const variableMin = numOrUndefined(r.variable_min ?? r.variableMin);
+        const variableMax = numOrUndefined(r.variable_max ?? r.variableMax);
+        const demandMin = numOrUndefined(r.demand_min ?? r.demandMin);
+        const demandMax = numOrUndefined(r.demand_max ?? r.demandMax);
+        const quarterlyStay = numOrUndefined(
+          r.quarterly_stay ?? r.quarterlyStay
+        );
+        const quarterlyPromotion = numOrUndefined(
+          r.quarterly_promotion ?? r.quarterlyPromotion
+        );
+
+        console.log("📦 Cargo mapeado:", {
+          id,
+          name,
+          baseSalary,
+          variableMin,
+          variableMax,
+          tipo: typeof baseSalary,
+        });
+
+        return {
+          id,
+          name,
+          path,
+          baseSalary,
+          variableMin,
+          variableMax,
+          demandMin,
+          demandMax,
+          quarterlyStay,
+          quarterlyPromotion,
+          description: r.description ? String(r.description) : undefined,
+          isActive:
+            r.is_active !== undefined
+              ? Boolean(r.is_active)
+              : r.isActive !== undefined
+              ? Boolean(r.isActive)
+              : undefined,
+        } as ApiRole;
+      })
+      .filter((role) => role.id && role.name);
+  } catch (error) {
+    console.error("Erro ao buscar cargos:", error);
     throw error;
   }
 }
@@ -182,8 +287,6 @@ export async function fetchEmployees(filters?: {
 
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
-    } else {
-      console.warn("⚠️ Nenhum token disponível para autenticação");
     }
 
     const url = new URL(`${API_BASE_URL}/moskit/v1/dashboard-summary/`);
@@ -194,40 +297,22 @@ export async function fetchEmployees(filters?: {
       url.searchParams.set("end_date", filters.endDate);
     }
 
-    console.log("📍 Tentando URL dashboard-summary:", url.toString());
-    console.log("📋 Com autenticação:", !!accessToken);
-
     const response = await fetch(url.toString(), {
       method: "GET",
       headers,
     });
 
-    console.log(
-      "📥 Status dashboard-summary:",
-      response.status,
-      response.statusText
-    );
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("❌ Dashboard-summary falhou:", response.status, errorData);
 
       // Se falhar, tenta fallback com /users/ (endpoint que sempre existe)
-      console.log("⚠️ Tentando fallback para /moskit/v1/users/");
       const fallbackResponse = await fetch(`${API_BASE_URL}/moskit/v1/users/`, {
         method: "GET",
         headers,
       });
 
-      console.log("📥 Status fallback /users/:", fallbackResponse.status);
-
       if (!fallbackResponse.ok) {
         const fallbackError = await fallbackResponse.json().catch(() => ({}));
-        console.error(
-          "❌ Fallback também falhou:",
-          fallbackResponse.status,
-          fallbackError
-        );
         throw new Error(
           fallbackError.detail ||
             `Erro ao buscar vendedores: ${response.status}`
@@ -301,21 +386,43 @@ export async function fetchEmployeeById(id: string): Promise<Employee> {
  * Mapeia um funcionário da API para o formato local
  * Ajuste os campos conforme a resposta da sua API
  */
-function mapApiEmployeeToLocal(apiData: Record<string, unknown>): Employee {
+function mapApiEmployeeToLocal(apiData: ApiUnknown): Employee {
   // Tentar extrair ID de várias possíveis localizações
   const id = String(apiData.id ?? apiData.user_id ?? apiData.pk ?? "");
 
   // Tentar extrair nome de várias possíveis localizações
+  const email = typeof apiData.email === "string" ? apiData.email : "";
   const name = String(
     apiData.nome ||
       apiData.name ||
       apiData.full_name ||
       apiData.username ||
-      apiData.email?.split("@")[0] ||
+      (email ? email.split("@")[0] : "") ||
       ""
   );
 
   console.log("🔍 Mapeando usuário:", { id, name, apiData });
+
+  const role = mapPerfilToRole(
+    apiData.role || apiData.role_id || apiData.roleId || apiData.perfil
+  );
+
+  const roleDetails = apiData.role_details as ApiUnknown | undefined;
+  const roleDetailsAlt = apiData.roleDetails as ApiUnknown | undefined;
+  const rolePathRaw =
+    (apiData as ApiUnknown).role_path ??
+    (apiData as ApiUnknown).rolePath ??
+    roleDetails?.path ??
+    roleDetailsAlt?.path ??
+    (apiData as ApiUnknown).path;
+  const path: CareerPath =
+    rolePathRaw === "leadership"
+      ? "leadership"
+      : rolePathRaw === "specialist"
+      ? "specialist"
+      : isLeadershipRole(role)
+      ? "leadership"
+      : "specialist";
 
   return {
     id,
@@ -323,16 +430,13 @@ function mapApiEmployeeToLocal(apiData: Record<string, unknown>): Employee {
     picture: String(
       apiData.picture_url || apiData.picture || apiData.photo || ""
     ),
-    implantadosAtual: Number((apiData as any).implantados_atual ?? 0),
-    assinadosAtual: Number((apiData as any).assinados_atual ?? 0),
-    metaImplantados: Number((apiData as any).meta_implantados ?? 0),
-    metaAssinados: Number((apiData as any).meta_assinados ?? 0),
-    ultimaSincronizacao: String((apiData as any).ultima_sincronizacao || ""),
-    role: (apiData.role || "level1") as CareerLevel,
-    path:
-      apiData.path === "leadership" || apiData.is_manager
-        ? "leadership"
-        : "specialist",
+    implantadosAtual: Number(apiData.implantados_atual ?? 0),
+    assinadosAtual: Number(apiData.assinados_atual ?? 0),
+    metaImplantados: Number(apiData.meta_implantados ?? 0),
+    metaAssinados: Number(apiData.meta_assinados ?? 0),
+    ultimaSincronizacao: String(apiData.ultima_sincronizacao || ""),
+    role,
+    path,
     currentDemand: Number(
       apiData.current_demand || apiData.monthly_target || apiData.revenue || 0
     ),
@@ -342,14 +446,21 @@ function mapApiEmployeeToLocal(apiData: Record<string, unknown>): Employee {
     tenure: Number(apiData.tenure || apiData.years_working || 0),
     teamSize:
       apiData.team_size || apiData.team
-        ? Number(apiData.team_size ?? Object.keys(apiData.team || {}).length)
+        ? Number(
+            apiData.team_size ??
+              (apiData.team && typeof apiData.team === "object"
+                ? Object.keys(apiData.team as ApiUnknown).length
+                : 0)
+          )
         : undefined,
-    promotedMembers: apiData.promoted_members
-      ? Number(apiData.promoted_members)
-      : undefined,
-    unitRevenue: apiData.unit_revenue
-      ? Number(apiData.unit_revenue)
-      : undefined,
+    promotedMembers:
+      apiData.promoted_members !== undefined
+        ? Number(apiData.promoted_members)
+        : undefined,
+    unitRevenue:
+      apiData.unit_revenue !== undefined
+        ? Number(apiData.unit_revenue)
+        : undefined,
   };
 }
 
@@ -357,7 +468,7 @@ function mapApiEmployeeToLocal(apiData: Record<string, unknown>): Employee {
  * Mapeia lista de funcionários da API para formato local
  */
 function mapApiEmployeesToLocal(
-  apiDataList: Record<string, unknown>[] | Record<string, unknown>
+  apiDataList: ApiUnknown[] | ApiUnknown
 ): Employee[] {
   // Se não é array, tenta extrair array de propriedades comuns
   if (!Array.isArray(apiDataList)) {
@@ -368,37 +479,39 @@ function mapApiEmployeesToLocal(
       if ("count" in apiDataList) {
         console.log(
           `📊 Resposta paginada: ${apiDataList.count} total, próxima: ${
-            (apiDataList as any).next ? "sim" : "não"
+            (apiDataList as ApiUnknown).next ? "sim" : "não"
           }`
         );
       }
 
       // Tenta propriedades comuns que APIs paginated usam
-      let arrayData: any[] | null = null;
+      let arrayData: ApiUnknown[] | null = null;
 
-      if (Array.isArray((apiDataList as any).results)) {
-        arrayData = (apiDataList as any).results;
+      const apiObj = apiDataList as ApiUnknown;
+
+      if (Array.isArray(apiObj.results)) {
+        arrayData = apiObj.results as ApiUnknown[];
         console.log(
           "✅ Array encontrado em propriedade 'results':",
           arrayData.length
         );
-      } else if (Array.isArray((apiDataList as any).data)) {
-        arrayData = (apiDataList as any).data;
+      } else if (Array.isArray(apiObj.data)) {
+        arrayData = apiObj.data as ApiUnknown[];
         console.log(
           "✅ Array encontrado em propriedade 'data':",
           arrayData.length
         );
-      } else if (Array.isArray((apiDataList as any).items)) {
-        arrayData = (apiDataList as any).items;
+      } else if (Array.isArray(apiObj.items)) {
+        arrayData = apiObj.items as ApiUnknown[];
         console.log(
           "✅ Array encontrado em propriedade 'items':",
           arrayData.length
         );
       } else {
         // Procura por qualquer propriedade que seja um array
-        for (const [key, value] of Object.entries(apiDataList)) {
+        for (const [key, value] of Object.entries(apiObj)) {
           if (Array.isArray(value)) {
-            arrayData = value;
+            arrayData = value as ApiUnknown[];
             console.log(
               `✅ Array encontrado em propriedade '${key}':`,
               arrayData.length
@@ -421,31 +534,102 @@ function mapApiEmployeesToLocal(
   return apiDataList.map(mapApiEmployeeToLocal).filter((emp) => emp.id);
 }
 
+function mapPerfilToRole(raw: unknown): CareerLevel {
+  const value = String(raw ?? "").trim();
+  const valueUpper = value.toUpperCase();
+
+  // Se já vier um slug válido, mantém
+  const careerLevels: CareerLevel[] = [
+    "level1",
+    "level2",
+    "level3",
+    "level4",
+    "level5",
+    "tech_leader_1",
+    "tech_leader_2",
+    "contract_manager",
+    "unit_manager",
+  ];
+  if (careerLevels.includes(value as CareerLevel)) {
+    return value as CareerLevel;
+  }
+
+  // Mapeia perfis comuns vindos do backend para os cargos do front
+  const perfilMap: Record<string, CareerLevel> = {
+    VENDEDOR: "level1",
+    MASTER: "level5",
+    LIDER: "tech_leader_1",
+    LÍDER: "tech_leader_1",
+    GERENTE: "unit_manager",
+    "GERENTE CONTRATO": "contract_manager",
+    CONTRACT_MANAGER: "contract_manager",
+    TECNICO2: "tech_leader_2",
+    TECNICO1: "tech_leader_1",
+    ESPECIALISTA3: "level3",
+    ESPECIALISTA4: "level4",
+    ESPECIALISTA5: "level5",
+  };
+
+  return perfilMap[valueUpper] ?? "level1";
+}
+
+function isLeadershipRole(role: CareerLevel): boolean {
+  return [
+    "tech_leader_1",
+    "tech_leader_2",
+    "contract_manager",
+    "unit_manager",
+  ].includes(role);
+}
+
+function numOrUndefined(value: unknown): number | undefined {
+  if (value === null || value === undefined) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /**
  * Atualiza dados de um vendedor na API
  */
 export async function updateEmployee(
   id: string,
   data: Partial<Employee>
-): Promise<Employee> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/moskit/v1/users/${id}/`, {
-      method: "PATCH",
+): Promise<void> {
+  const payload: Record<string, unknown> = {};
+
+  // Mapeia campos do frontend para backend
+  if (data.name !== undefined) payload.nome = data.name;
+  if (data.role !== undefined) payload.role = data.role;
+  if (data.path !== undefined) payload.path = data.path;
+  if (data.implantadosAtual !== undefined)
+    payload.implantados_atual = data.implantadosAtual;
+  if (data.assinadosAtual !== undefined)
+    payload.assinados_atual = data.assinadosAtual;
+  if (data.metaImplantados !== undefined)
+    payload.meta_implantados = data.metaImplantados;
+  if (data.metaAssinados !== undefined)
+    payload.meta_assinados = data.metaAssinados;
+  if (data.teamSize !== undefined) payload.team_size = data.teamSize;
+  if (data.promotedMembers !== undefined)
+    payload.promoted_members = data.promotedMembers;
+  if (data.unitRevenue !== undefined) payload.unit_revenue = data.unitRevenue;
+
+  const response = await fetch(
+    `${API_BASE_URL}/moskit/v1/dashboard-summary/${id}/`,
+    {
+      method: "PUT",
       headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `Erro ao atualizar vendedor: ${response.status}`
-      );
+      body: JSON.stringify(payload),
     }
+  );
 
-    const updated = await response.json();
-    return mapApiEmployeeToLocal(updated);
-  } catch (error) {
-    console.error("Erro ao atualizar funcionário:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || `Erro ao atualizar vendedor: ${response.status}`
+    );
   }
+
+  // Ignora a resposta - o refetch vai trazer os dados completos
+  await response.json();
 }

@@ -1,21 +1,33 @@
 import { cn } from "@/lib/utils";
 import { Wallet, TrendingUp, Award, DollarSign } from "lucide-react";
-import { Employee, calculateCompensation, formatCurrency } from "@/lib/data";
+import {
+  Employee,
+  calculateCompensation,
+  formatCurrency,
+  ROLES,
+  type RoleMap,
+} from "@/lib/data";
 
 interface FinancialSummaryProps {
   employees: Employee[];
   className?: string;
+  rolesMap?: RoleMap;
 }
 
-export function FinancialSummary({ employees, className }: FinancialSummaryProps) {
+export function FinancialSummary({
+  employees,
+  className,
+  rolesMap = ROLES,
+}: FinancialSummaryProps) {
   // Calculate totals for all employees
   const totals = employees.reduce(
     (acc, employee) => {
-      const comp = calculateCompensation(employee);
+      const comp = calculateCompensation(employee, rolesMap);
       return {
         baseSalary: acc.baseSalary + comp.baseSalary,
         variablePay: acc.variablePay + comp.variablePay,
-        bonuses: acc.bonuses + comp.teamBonus + comp.promotionAddOn + comp.unitAddOn,
+        bonuses:
+          acc.bonuses + comp.teamBonus + comp.promotionAddOn + comp.unitAddOn,
         total: acc.total + comp.total,
       };
     },
@@ -118,8 +130,9 @@ export function FinancialSummary({ employees, className }: FinancialSummaryProps
             </thead>
             <tbody>
               {employees.map((employee) => {
-                const comp = calculateCompensation(employee);
-                const bonusTotal = comp.teamBonus + comp.promotionAddOn + comp.unitAddOn;
+                const comp = calculateCompensation(employee, rolesMap);
+                const bonusTotal =
+                  comp.teamBonus + comp.promotionAddOn + comp.unitAddOn;
                 return (
                   <tr
                     key={employee.id}
@@ -149,7 +162,9 @@ export function FinancialSummary({ employees, className }: FinancialSummaryProps
             <tfoot>
               <tr className="bg-secondary/50">
                 <td className="px-5 py-3">
-                  <span className="text-sm font-semibold text-foreground">Total</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Total
+                  </span>
                 </td>
                 <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums text-foreground">
                   {formatCurrency(totals.baseSalary)}

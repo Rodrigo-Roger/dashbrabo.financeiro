@@ -33,10 +33,7 @@ export const login = async (
   username: string,
   password: string
 ): Promise<AuthTokens> => {
-  console.log("🔍 Iniciando login para:", username);
-
   try {
-    console.log("📤 Tentando login via API...");
     const response = await fetch(`${API_BASE_URL}/auth/v1/token/`, {
       method: "POST",
       headers: {
@@ -49,7 +46,6 @@ export const login = async (
     const data = await response.json();
 
     if (response.ok && data?.access) {
-      console.log("✅ Login bem-sucedido!");
       const tokens: AuthTokens = data;
       saveTokens(tokens);
       saveUser({ username });
@@ -58,7 +54,6 @@ export const login = async (
       throw new Error(data.detail || "Credenciais inválidas");
     }
   } catch (err) {
-    console.error("❌ Erro na autenticação:", err);
     throw new Error("Erro na autenticação. Verifique suas credenciais.");
   }
 };

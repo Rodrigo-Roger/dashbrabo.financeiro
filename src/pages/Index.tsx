@@ -15,9 +15,10 @@ import {
   ROLES,
   calculateCompensation,
   formatCurrency,
+  type RoleMap,
 } from "@/lib/data";
 import { isAuthenticated, getUser } from "@/lib/auth";
-import { useEmployees } from "@/hooks/useEmployeeApi";
+import { useEmployees, useRoles } from "@/hooks/useEmployeeApi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Header } from "@/components/dashboard/Header";
@@ -47,6 +48,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DateRange } from "react-day-picker";
 
 // Sample revenue data for chart
 const sampleRevenueData = [
@@ -66,12 +68,8 @@ export default function Index() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
     null
   );
-  const [fallbackToSample, setFallbackToSample] = useState(false);
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
-  const [tempDateRange, setTempDateRange] = useState<{
-    from?: Date;
-    to?: Date;
-  }>({});
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>();
   const [appliedFilters, setAppliedFilters] = useState<{
     startDate?: string;
     endDate?: string;
@@ -89,16 +87,15 @@ export default function Index() {
 
   // Buscar informações do usuário logado (perfil e permissões)
   const { data: currentUser, status: userStatus } = useCurrentUser();
+  const {
+    data: rolesMapApi,
+    status: rolesStatus,
+    isLoading: rolesLoading,
+  } = useRoles();
 
-  useEffect(() => {
-    console.log("📊 Estado dos funcionários:", {
-      employees,
-      isLoading,
-      error,
-      status: employeeStatus,
-    });
-    console.log("👤 Usuário logado:", currentUser, "Status:", userStatus);
-  }, [employees, isLoading, error, currentUser, employeeStatus, userStatus]);
+  const rolesMap = useMemo<RoleMap>(() => {
+    return rolesMapApi ?? ROLES;
+  }, [rolesMapApi]);
 
   useEffect(() => {
     // Verificar autenticação
@@ -110,13 +107,10 @@ export default function Index() {
     }
   }, [navigate]);
 
-  // Usar API ou fallback para dados de exemplo
+  // Usar dados da API (sem fallback para dados de exemplo)
   const allEmployees = useMemo(() => {
-    if (fallbackToSample || error) {
-      return SAMPLE_EMPLOYEES;
-    }
-    return employees || SAMPLE_EMPLOYEES;
-  }, [employees, fallbackToSample, error]);
+    return employees || [];
+  }, [employees]);
 
   // Backend já retorna filtrado por permissão; usamos todos
   const allowedEmployees = useMemo(() => {
@@ -125,11 +119,6 @@ export default function Index() {
 
   // Filtrar apenas vendedores permitidos (sem seleção adicional)
   const employeeList = useMemo(() => {
-    console.log(
-      "📋 employeeList recalculado:",
-      allowedEmployees?.length || 0,
-      "vendedores"
-    );
     return allowedEmployees;
   }, [allowedEmployees]);
 
@@ -147,14 +136,16 @@ export default function Index() {
     [selectedEmployeeId, employeeList]
   );
 
-  const compensation = useMemo(
-    () => (selectedEmployee ? calculateCompensation(selectedEmployee) : null),
-    [selectedEmployee]
-  );
+  const compensation = useMemo(() => {
+    if (selectedEmployee) {
+      return calculateCompensation(selectedEmployee, rolesMap);
+    }
+    return null;
+  }, [selectedEmployee, rolesMap]);
 
-  const role = selectedEmployee ? ROLES[selectedEmployee.role] : null;
+  const role = selectedEmployee ? rolesMap[selectedEmployee.role] : null;
 
-  if (isLoading && !fallbackToSample && !employees && !error) {
+  if (isLoading && !employees) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -168,21 +159,14 @@ export default function Index() {
   }
 
   const renderContent = () => {
-    // Mostrar erro se houver e oferecer fallback
-    if (error && !fallbackToSample) {
+    // Mostrar erro se houver
+    if (error && employeeList.length === 0) {
       return (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between gap-4">
-            <span>
-              Erro ao carregar vendedores da API. Usando dados de exemplo.
-            </span>
-            <button
-              onClick={() => setFallbackToSample(true)}
-              className="text-xs font-semibold underline"
-            >
-              Usar dados de exemplo
-            </button>
+          <AlertDescription>
+            Erro ao carregar vendedores da API. Por favor, verifique sua conexão
+            e tente novamente.
           </AlertDescription>
         </Alert>
       );
@@ -222,7 +206,7 @@ export default function Index() {
             )}
 
             {employeeList.length > 0 && (
-              <TeamOverview employees={employeeList} />
+              <TeamOverview employees={employeeList} rolesMap={rolesMap} />
             )}
           </div>
         );
@@ -238,7 +222,7 @@ export default function Index() {
                 Métricas consolidadas por unidade de negócio
               </p>
             </div>
-            <TeamOverview employees={employeeList} />
+            <TeamOverview employees={employeeList} rolesMap={rolesMap} />
           </div>
         );
 
@@ -253,7 +237,7 @@ export default function Index() {
                 Custo total mensal com equipe comercial
               </p>
             </div>
-            <FinancialSummary employees={employeeList} />
+            <FinancialSummary employees={employeeList} rolesMap={rolesMap} />
           </div>
         );
 
@@ -283,7 +267,7 @@ export default function Index() {
                 Defina cargos e visualize as metas correspondentes
               </p>
             </div>
-            <RolesGoalsView employees={employeeList} />
+            <RolesGoalsView employees={employeeList} rolesMap={rolesMap} />
           </div>
         );
 
@@ -300,7 +284,7 @@ export default function Index() {
             </div>
             <TeamOverview
               employees={employeeList.filter((e) => {
-                const r = ROLES[e.role];
+                const r = rolesMap[e.role];
                 return (
                   r.quarterlyPromotion &&
                   e.quarterlyRevenue >= r.quarterlyPromotion
@@ -330,6 +314,7 @@ export default function Index() {
                 employees={employeeList}
                 selectedId={selectedEmployeeId || ""}
                 onSelect={setSelectedEmployeeId}
+                rolesMap={rolesMap}
               />
             </div>
 
@@ -412,7 +397,7 @@ export default function Index() {
                       className="min-w-[280px] justify-between bg-background hover:bg-muted"
                     >
                       <span className="text-sm">
-                        {dateRange.from && dateRange.to
+                        {dateRange?.from && dateRange?.to
                           ? `${format(dateRange.from, "dd/MM/yyyy", {
                               locale: ptBR,
                             })} - ${format(dateRange.to, "dd/MM/yyyy", {
@@ -429,7 +414,6 @@ export default function Index() {
                       locale={ptBR}
                       selected={tempDateRange}
                       onSelect={(range) => {
-                        console.log("📅 Data selecionada:", range);
                         if (range) {
                           setTempDateRange(range);
                         }
@@ -446,7 +430,7 @@ export default function Index() {
                         size="sm"
                         className="flex-1"
                         onClick={() => {
-                          setTempDateRange({});
+                          setTempDateRange(undefined);
                           setCalendarOpen(false);
                         }}
                       >
@@ -459,7 +443,7 @@ export default function Index() {
                           setDateRange(tempDateRange);
                           setCalendarOpen(false);
                         }}
-                        disabled={!tempDateRange.from || !tempDateRange.to}
+                        disabled={!tempDateRange?.from || !tempDateRange?.to}
                       >
                         Aplicar
                       </Button>
@@ -467,15 +451,14 @@ export default function Index() {
                   </PopoverContent>
                 </Popover>
 
-                {dateRange.from && dateRange.to && (
+                {dateRange?.from && dateRange?.to && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setDateRange({});
-                      setTempDateRange({});
+                      setDateRange(undefined);
+                      setTempDateRange(undefined);
                       setAppliedFilters({});
-                      console.log("🧹 Limpando filtros");
                     }}
                     title="Limpar filtro"
                   >
@@ -487,23 +470,15 @@ export default function Index() {
                   size="sm"
                   className="bg-primary hover:bg-primary/90 gap-2"
                   onClick={() => {
-                    if (dateRange.from && dateRange.to) {
+                    if (dateRange?.from && dateRange?.to) {
                       const filters = {
                         startDate: format(dateRange.from, "yyyy-MM-dd"),
                         endDate: format(dateRange.to, "yyyy-MM-dd"),
                       };
-                      console.log(
-                        "🔎 Botão Filtrar clicado! Aplicando filtros:",
-                        filters
-                      );
                       setAppliedFilters(filters);
-                      console.log(
-                        "✅ appliedFilters atualizado para:",
-                        filters
-                      );
                     }
                   }}
-                  disabled={!dateRange.from || !dateRange.to}
+                  disabled={!dateRange?.from || !dateRange?.to}
                 >
                   <Search className="h-4 w-4" />
                   Filtrar

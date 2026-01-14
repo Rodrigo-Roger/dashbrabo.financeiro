@@ -2,11 +2,11 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Users, Briefcase, Target, CheckCircle, Save } from "lucide-react";
 import {
-  ROLES,
   CareerLevel,
   formatCurrency,
-  SAMPLE_EMPLOYEES,
   Employee,
+  ROLES,
+  type RoleMap,
 } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -18,31 +18,93 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateEmployee } from "@/lib/api";
 
 interface RolesGoalsViewProps {
   employees?: Employee[];
   className?: string;
+  rolesMap?: RoleMap;
 }
 
 export function RolesGoalsView({
   employees = SAMPLE_EMPLOYEES,
+  rolesMap = ROLES,
   className,
 }: RolesGoalsViewProps) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<CareerLevel | "">("");
+  const queryClient = useQueryClient();
+
+  const { mutate: mutateRole, isPending: isSaving } = useMutation({
+    mutationFn: async (payload: { id: string; role: CareerLevel }) => {
+      const roleConfig = rolesMap[payload.role];
+      const updateData = {
+        role: payload.role,
+        path: roleConfig?.path,
+      };
+      // Envia a atualização mas ignora a resposta incompleta
+      // O refetch no onSuccess vai trazer os dados completos
+      await updateEmployee(payload.id, updateData);
+      return payload;
+    },
+    onMutate: async ({ id, role }) => {
+      // Cancela TODAS as queries de employees (com ou sem filtros)
+      await queryClient.cancelQueries({ queryKey: ["employees"] });
+
+      // Atualiza otimisticamente TODAS as queries de employees
+      const previousData = new Map();
+
+      queryClient
+        .getQueriesData<Employee[]>({ queryKey: ["employees"] })
+        .forEach(([key, data]) => {
+          previousData.set(key, data);
+          if (Array.isArray(data)) {
+            queryClient.setQueryData(
+              key,
+              data.map((emp) =>
+                emp.id === id
+                  ? { ...emp, role, path: rolesMap[role]?.path ?? emp.path }
+                  : emp
+              )
+            );
+          }
+        });
+
+      return { previousData };
+    },
+    onSuccess: async () => {
+      // Força refetch imediato de TODAS as queries de employees
+      await queryClient.refetchQueries({
+        queryKey: ["employees"],
+        type: "active",
+      });
+      toast.success("Cargo atualizado com sucesso");
+    },
+    onError: (error, variables, context) => {
+      // Reverte TODAS as queries para o estado anterior em caso de erro
+      if (context?.previousData) {
+        context.previousData.forEach((data, key) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar o cargo"
+      );
+    },
+  });
 
   const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
-  const role = selectedRole ? ROLES[selectedRole] : null;
+  const role = selectedRole ? rolesMap[selectedRole] : null;
 
   const handleSave = () => {
     if (!selectedEmployeeId || !selectedRole) {
       toast.error("Selecione um vendedor e um cargo");
       return;
     }
-    // TODO: Enviar para API quando disponível
-    toast.success(
-      `Cargo de ${selectedEmployee?.name} atualizado para ${role?.name}`
-    );
+    mutateRole({ id: selectedEmployeeId, role: selectedRole });
   };
 
   return (
@@ -81,7 +143,7 @@ export function RolesGoalsView({
                       <div className="flex flex-col">
                         <span>{emp.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          Atual: {ROLES[emp.role].name}
+                          Atual: {rolesMap[emp.role]?.name || emp.role}
                         </span>
                       </div>
                     </SelectItem>
@@ -107,7 +169,7 @@ export function RolesGoalsView({
                   <SelectValue placeholder="Selecione um cargo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(ROLES).map((r) => (
+                  {Object.values(rolesMap).map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       <div className="flex flex-col">
                         <span>{r.name}</span>
@@ -130,11 +192,11 @@ export function RolesGoalsView({
 
             <Button
               onClick={handleSave}
-              disabled={!selectedEmployeeId || !selectedRole}
+              disabled={!selectedEmployeeId || !selectedRole || isSaving}
               className="w-full"
             >
               <Save className="h-4 w-4 mr-2" />
-              Salvar Alterações
+              {isSaving ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
 

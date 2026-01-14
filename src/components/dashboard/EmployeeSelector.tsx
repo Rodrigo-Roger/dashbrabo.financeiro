@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Employee, ROLES } from "@/lib/data";
+import { Employee, ROLES, type RoleMap } from "@/lib/data";
 import {
   Select,
   SelectContent,
@@ -13,17 +13,22 @@ interface EmployeeSelectorProps {
   selectedId: string;
   onSelect: (id: string) => void;
   className?: string;
+  rolesMap?: RoleMap;
 }
 
-export function EmployeeSelector({ employees, selectedId, onSelect, className }: EmployeeSelectorProps) {
-  const selectedEmployee = employees.find(e => e.id === selectedId);
-  
+export function EmployeeSelector({
+  employees,
+  selectedId,
+  onSelect,
+  className,
+  rolesMap = ROLES,
+}: EmployeeSelectorProps) {
+  const selectedEmployee = employees.find((e) => e.id === selectedId);
+
   return (
     <Select value={selectedId} onValueChange={onSelect}>
       <SelectTrigger className={cn("w-[220px] h-9 text-sm bg-card", className)}>
-        <SelectValue>
-          {selectedEmployee?.name}
-        </SelectValue>
+        <SelectValue>{selectedEmployee?.name}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {employees.map((employee) => (
@@ -31,7 +36,7 @@ export function EmployeeSelector({ employees, selectedId, onSelect, className }:
             <div className="flex flex-col">
               <span className="text-sm">{employee.name}</span>
               <span className="text-xs text-muted-foreground">
-                {ROLES[employee.role].name}
+                {rolesMap[employee.role]?.name || employee.role}
               </span>
             </div>
           </SelectItem>

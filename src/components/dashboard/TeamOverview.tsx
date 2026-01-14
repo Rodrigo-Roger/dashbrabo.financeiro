@@ -2,30 +2,36 @@ import { cn } from "@/lib/utils";
 import { Users, TrendingUp, Target, Award } from "lucide-react";
 import {
   Employee,
-  ROLES,
   formatCurrency,
   calculateCompensation,
   getPerformanceStatus,
+  ROLES,
+  type RoleMap,
 } from "@/lib/data";
 import { StatusBadge } from "./StatusBadge";
 
 interface TeamOverviewProps {
   employees: Employee[];
   className?: string;
+  rolesMap?: RoleMap;
 }
 
-export function TeamOverview({ employees, className }: TeamOverviewProps) {
+export function TeamOverview({
+  employees,
+  className,
+  rolesMap = ROLES,
+}: TeamOverviewProps) {
   const totalRevenue = employees.reduce(
     (sum, emp) => sum + emp.quarterlyRevenue,
     0
   );
   const totalPayout = employees.reduce(
-    (sum, emp) => sum + calculateCompensation(emp).total,
+    (sum, emp) => sum + calculateCompensation(emp, rolesMap).total,
     0
   );
   const avgPerformance =
     employees.reduce((sum, emp) => {
-      const role = ROLES[emp.role];
+      const role = rolesMap[emp.role];
       if (role.quarterlyStay) {
         return sum + (emp.quarterlyRevenue / role.quarterlyStay) * 100;
       }
@@ -118,8 +124,8 @@ export function TeamOverview({ employees, className }: TeamOverviewProps) {
             </thead>
             <tbody>
               {employees.map((employee) => {
-                const role = ROLES[employee.role];
-                const compensation = calculateCompensation(employee);
+                const role = rolesMap[employee.role];
+                const compensation = calculateCompensation(employee, rolesMap);
                 const status = getPerformanceStatus(
                   employee.quarterlyRevenue,
                   role.quarterlyStay,
