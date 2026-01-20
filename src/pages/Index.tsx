@@ -49,6 +49,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
+import { DiscountsView } from "@/components/dashboard/DiscountsView";
 
 // Sample revenue data for chart
 const sampleRevenueData = [
@@ -291,6 +292,21 @@ export default function Index() {
                 );
               })}
             />
+          </div>
+        );
+
+      case "discount":
+        return (
+          <div className="space-y-5">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                Descontos 
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Descontos de monster e adiantamentos
+              </p>
+            </div>
+            <DiscountsView employees={employeeList} rolesMap={rolesMap} />
           </div>
         );
 

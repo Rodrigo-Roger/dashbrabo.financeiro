@@ -7,6 +7,7 @@ import {
   Employee,
   ROLES,
   type RoleMap,
+  SAMPLE_EMPLOYEES,
 } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -150,9 +151,6 @@ export function RolesGoalsView({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Em breve os vendedores serão carregados via API
-              </p>
             </div>
 
             <div className="space-y-2">

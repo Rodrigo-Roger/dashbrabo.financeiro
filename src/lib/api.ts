@@ -86,7 +86,7 @@ export async function fetchCurrentUser(): Promise<{
     // Verificar se authorized_users já vem na resposta do Django
     if (!user.authorized_users) {
       console.log(
-        "⚠️ authorized_users não retornou do Django, tentando buscar via API..."
+        "⚠️ authorized_users não retornou do Django, tentando buscar via API...",
       );
 
       // Para outros perfis, tenta buscar a lista de vendedores permitidos
@@ -114,7 +114,7 @@ export async function fetchCurrentUser(): Promise<{
           {
             method: "GET",
             headers: permissionHeaders,
-          }
+          },
         );
 
         if (permissionResponse.ok) {
@@ -127,12 +127,12 @@ export async function fetchCurrentUser(): Promise<{
             : [];
           console.log(
             "✅ Usuários permitidos encontrados (como strings):",
-            user.authorized_users
+            user.authorized_users,
           );
         } else {
           console.warn(
             "⚠️ Endpoint de usuários permitidos retornou status:",
-            permissionResponse.status
+            permissionResponse.status,
           );
           user.authorized_users = [];
         }
@@ -144,7 +144,7 @@ export async function fetchCurrentUser(): Promise<{
       // authorized_users já veio do Django
       console.log(
         "✅ authorized_users retornado do Django:",
-        user.authorized_users
+        user.authorized_users,
       );
       // Garantir que é um array
       if (!Array.isArray(user.authorized_users)) {
@@ -172,7 +172,7 @@ export async function fetchRoles(): Promise<ApiRole[]> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.detail || `Erro ao buscar cargos: ${response.status}`
+        errorData.detail || `Erro ao buscar cargos: ${response.status}`,
       );
     }
 
@@ -181,12 +181,12 @@ export async function fetchRoles(): Promise<ApiRole[]> {
     const list = Array.isArray(payload)
       ? payload
       : Array.isArray(payload?.results)
-      ? payload.results
-      : [];
+        ? payload.results
+        : [];
 
     console.log(
       "✅ Cargos recebidos:",
-      Array.isArray(list) ? `${list.length} itens` : typeof list
+      Array.isArray(list) ? `${list.length} itens` : typeof list,
     );
     return list
       .map((role) => {
@@ -202,10 +202,10 @@ export async function fetchRoles(): Promise<ApiRole[]> {
         const demandMin = numOrUndefined(r.demand_min ?? r.demandMin);
         const demandMax = numOrUndefined(r.demand_max ?? r.demandMax);
         const quarterlyStay = numOrUndefined(
-          r.quarterly_stay ?? r.quarterlyStay
+          r.quarterly_stay ?? r.quarterlyStay,
         );
         const quarterlyPromotion = numOrUndefined(
-          r.quarterly_promotion ?? r.quarterlyPromotion
+          r.quarterly_promotion ?? r.quarterlyPromotion,
         );
 
         console.log("📦 Cargo mapeado:", {
@@ -233,8 +233,8 @@ export async function fetchRoles(): Promise<ApiRole[]> {
             r.is_active !== undefined
               ? Boolean(r.is_active)
               : r.isActive !== undefined
-              ? Boolean(r.isActive)
-              : undefined,
+                ? Boolean(r.isActive)
+                : undefined,
         } as ApiRole;
       })
       .filter((role) => role.id && role.name);
@@ -272,7 +272,7 @@ export async function fetchEmployees(filters?: {
         accessToken = parsed.access || "";
         console.log(
           "✅ Token recuperado de auth_tokens (primeiros 20 chars):",
-          accessToken.substring(0, 20) + "..."
+          accessToken.substring(0, 20) + "...",
         );
       } catch (e) {
         console.warn("⚠️ Não foi possível parsear auth_tokens:", e);
@@ -315,7 +315,7 @@ export async function fetchEmployees(filters?: {
         const fallbackError = await fallbackResponse.json().catch(() => ({}));
         throw new Error(
           fallbackError.detail ||
-            `Erro ao buscar vendedores: ${response.status}`
+            `Erro ao buscar vendedores: ${response.status}`,
         );
       }
 
@@ -324,7 +324,7 @@ export async function fetchEmployees(filters?: {
         "✅ Dados do fallback:",
         Array.isArray(fallbackData)
           ? `${fallbackData.length} vendedores`
-          : fallbackData
+          : fallbackData,
       );
       const result = mapApiEmployeesToLocal(fallbackData);
       console.log("✅ Vendedores mapeados (fallback):", result.length, "itens");
@@ -334,17 +334,17 @@ export async function fetchEmployees(filters?: {
     const data = await response.json();
     console.log(
       "✅ Dashboard-summary retornou:",
-      Array.isArray(data) ? `${data.length} vendedores` : typeof data
+      Array.isArray(data) ? `${data.length} vendedores` : typeof data,
     );
     console.log(
       "📊 Resposta completa (primeiros 500 chars):",
-      JSON.stringify(data).substring(0, 500)
+      JSON.stringify(data).substring(0, 500),
     );
     console.log(
       "📊 Tipo da resposta:",
       typeof data,
       "É array?",
-      Array.isArray(data)
+      Array.isArray(data),
     );
 
     // Mapear resposta da API para o formato esperado
@@ -370,7 +370,7 @@ export async function fetchEmployeeById(id: string): Promise<Employee> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.detail || `Erro ao buscar vendedor: ${response.status}`
+        errorData.detail || `Erro ao buscar vendedor: ${response.status}`,
       );
     }
 
@@ -398,13 +398,13 @@ function mapApiEmployeeToLocal(apiData: ApiUnknown): Employee {
       apiData.full_name ||
       apiData.username ||
       (email ? email.split("@")[0] : "") ||
-      ""
+      "",
   );
 
   console.log("🔍 Mapeando usuário:", { id, name, apiData });
 
   const role = mapPerfilToRole(
-    apiData.role || apiData.role_id || apiData.roleId || apiData.perfil
+    apiData.role || apiData.role_id || apiData.roleId || apiData.perfil,
   );
 
   const roleDetails = apiData.role_details as ApiUnknown | undefined;
@@ -419,16 +419,16 @@ function mapApiEmployeeToLocal(apiData: ApiUnknown): Employee {
     rolePathRaw === "leadership"
       ? "leadership"
       : rolePathRaw === "specialist"
-      ? "specialist"
-      : isLeadershipRole(role)
-      ? "leadership"
-      : "specialist";
+        ? "specialist"
+        : isLeadershipRole(role)
+          ? "leadership"
+          : "specialist";
 
   return {
     id,
     name,
     picture: String(
-      apiData.picture_url || apiData.picture || apiData.photo || ""
+      apiData.picture_url || apiData.picture || apiData.photo || "",
     ),
     implantadosAtual: Number(apiData.implantados_atual ?? 0),
     assinadosAtual: Number(apiData.assinados_atual ?? 0),
@@ -438,10 +438,10 @@ function mapApiEmployeeToLocal(apiData: ApiUnknown): Employee {
     role,
     path,
     currentDemand: Number(
-      apiData.current_demand || apiData.monthly_target || apiData.revenue || 0
+      apiData.current_demand || apiData.monthly_target || apiData.revenue || 0,
     ),
     quarterlyRevenue: Number(
-      apiData.quarterly_revenue || apiData.total_revenue || apiData.sales || 0
+      apiData.quarterly_revenue || apiData.total_revenue || apiData.sales || 0,
     ),
     tenure: Number(apiData.tenure || apiData.years_working || 0),
     teamSize:
@@ -450,7 +450,7 @@ function mapApiEmployeeToLocal(apiData: ApiUnknown): Employee {
             apiData.team_size ??
               (apiData.team && typeof apiData.team === "object"
                 ? Object.keys(apiData.team as ApiUnknown).length
-                : 0)
+                : 0),
           )
         : undefined,
     promotedMembers:
@@ -468,7 +468,7 @@ function mapApiEmployeeToLocal(apiData: ApiUnknown): Employee {
  * Mapeia lista de funcionários da API para formato local
  */
 function mapApiEmployeesToLocal(
-  apiDataList: ApiUnknown[] | ApiUnknown
+  apiDataList: ApiUnknown[] | ApiUnknown,
 ): Employee[] {
   // Se não é array, tenta extrair array de propriedades comuns
   if (!Array.isArray(apiDataList)) {
@@ -480,7 +480,7 @@ function mapApiEmployeesToLocal(
         console.log(
           `📊 Resposta paginada: ${apiDataList.count} total, próxima: ${
             (apiDataList as ApiUnknown).next ? "sim" : "não"
-          }`
+          }`,
         );
       }
 
@@ -493,19 +493,19 @@ function mapApiEmployeesToLocal(
         arrayData = apiObj.results as ApiUnknown[];
         console.log(
           "✅ Array encontrado em propriedade 'results':",
-          arrayData.length
+          arrayData.length,
         );
       } else if (Array.isArray(apiObj.data)) {
         arrayData = apiObj.data as ApiUnknown[];
         console.log(
           "✅ Array encontrado em propriedade 'data':",
-          arrayData.length
+          arrayData.length,
         );
       } else if (Array.isArray(apiObj.items)) {
         arrayData = apiObj.items as ApiUnknown[];
         console.log(
           "✅ Array encontrado em propriedade 'items':",
-          arrayData.length
+          arrayData.length,
         );
       } else {
         // Procura por qualquer propriedade que seja um array
@@ -514,7 +514,7 @@ function mapApiEmployeesToLocal(
             arrayData = value as ApiUnknown[];
             console.log(
               `✅ Array encontrado em propriedade '${key}':`,
-              arrayData.length
+              arrayData.length,
             );
             break;
           }
@@ -593,7 +593,7 @@ function numOrUndefined(value: unknown): number | undefined {
  */
 export async function updateEmployee(
   id: string,
-  data: Partial<Employee>
+  data: Partial<Employee>,
 ): Promise<void> {
   const payload: Record<string, unknown> = {};
 
@@ -620,16 +620,176 @@ export async function updateEmployee(
       method: "PUT",
       headers: getAuthHeaders(),
       body: JSON.stringify(payload),
-    }
+    },
   );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(
-      errorData.detail || `Erro ao atualizar vendedor: ${response.status}`
+      errorData.detail || `Erro ao atualizar vendedor: ${response.status}`,
     );
   }
 
   // Ignora a resposta - o refetch vai trazer os dados completos
   await response.json();
+}
+
+/**
+ * Interface para descontos
+ */
+export interface Discount {
+  id?: string;
+  seller: string; // UUID do vendedor
+  discount_type: string; // UUID do tipo de desconto
+  custom_amount?: number; // Para adiantamento
+  quantity?: number; // Para monster
+  notes?: string;
+  // Campos de resposta
+  seller_name?: string;
+  discount_type_name?: string;
+  discount_type_code?: string;
+  total_discount?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Busca todos os descontos de um funcionário
+ */
+export async function fetchDiscounts(employeeId: string): Promise<Discount[]> {
+  try {
+    console.log("🔍 Buscando descontos para seller:", employeeId);
+
+    const response = await fetch(
+      `${API_BASE_URL}/moskit/v1/discounts/?seller=${employeeId}`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("❌ Erro ao buscar:", errorData);
+      throw new Error(
+        errorData.detail || `Erro ao buscar descontos: ${response.status}`,
+      );
+    }
+
+    const data = await response.json();
+    console.log("✅ Descontos recebidos:", data);
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error("❌ Erro ao buscar descontos:", error);
+    throw error;
+  }
+}
+
+/**
+ * Cria um novo desconto
+ */
+export async function createDiscount(discount: Discount): Promise<Discount> {
+  try {
+    // Remove campos undefined/null
+    const payload = Object.fromEntries(
+      Object.entries(discount).filter(([, v]) => v !== undefined && v !== null),
+    );
+
+    console.log("📤 Enviando desconto:", payload);
+
+    const response = await fetch(`${API_BASE_URL}/moskit/v1/discounts/`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("❌ Erro da API:", errorData);
+      throw new Error(
+        errorData.detail ||
+          JSON.stringify(errorData) ||
+          `Erro ao criar desconto: ${response.status}`,
+      );
+    }
+
+    const result = await response.json();
+    console.log("✅ Desconto criado:", result);
+    return result;
+  } catch (error) {
+    console.error("❌ Erro ao criar desconto:", error);
+    throw error;
+  }
+}
+
+/**
+ * Remove um desconto
+ */
+export async function deleteDiscount(discountId: string): Promise<void> {
+  try {
+    console.log("🗑️ Deletando desconto:", discountId);
+
+    const response = await fetch(
+      `${API_BASE_URL}/moskit/v1/discounts/${discountId}/`,
+      {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.detail || `Erro ao deletar desconto: ${response.status}`,
+      );
+    }
+  } catch (error) {
+    console.error("❌ Erro ao deletar desconto:", error);
+    throw error;
+  }
+}
+
+/**
+ * Interface para tipos de desconto
+ */
+export interface DiscountType {
+  id: string;
+  code: string;
+  name: string;
+  discount_type: string;
+  discount_type_display: string;
+  fixed_amount: string | null;
+  requires_quantity: boolean;
+  is_active: boolean;
+}
+
+/**
+ * Busca os tipos de desconto disponíveis
+ */
+export async function fetchDiscountTypes(): Promise<DiscountType[]> {
+  try {
+    console.log("🔍 Buscando tipos de desconto...");
+
+    const response = await fetch(`${API_BASE_URL}/moskit/v1/discount-types/`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("❌ Erro ao buscar tipos:", errorData);
+      throw new Error(
+        errorData.detail ||
+          `Erro ao buscar tipos de desconto: ${response.status}`,
+      );
+    }
+
+    const data = await response.json();
+    console.log("✅ Tipos de desconto recebidos:", data);
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error("❌ Erro ao buscar tipos de desconto:", error);
+    throw error;
+  }
 }

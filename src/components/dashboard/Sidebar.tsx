@@ -10,6 +10,7 @@ import {
   HelpCircle,
   X,
   CheckCircle2,
+  TrendingDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoMontseguro from "@/assets/logo-montseguro.png";
@@ -31,6 +32,7 @@ const menuItems = [
 const secondaryItems = [
   { id: "simulator", label: "Cargos e Metas", icon: TrendingUp },
   { id: "promotions", label: "Promoções", icon: Award },
+  { id: "discount", label: "Descontos", icon: TrendingDown },
 ];
 
 export function Sidebar({
