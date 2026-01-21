@@ -312,7 +312,6 @@ export default function Index() {
             </div>
             <DiscountsView
               employees={employeeList}
-              rolesMap={rolesMap}
               dateFilter={appliedFilters}
             />
           </div>

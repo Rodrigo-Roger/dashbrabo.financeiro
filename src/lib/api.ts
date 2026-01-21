@@ -40,171 +40,150 @@ export async function fetchCurrentUser(): Promise<{
   picture_url: string;
   authorized_users?: string[]; // IDs dos vendedores que pode ver
 }> {
-  try {
-    // Obter token dos tokens salvos (não de access_token direto)
-    const token = localStorage.getItem("auth_tokens");
-    let accessToken = "";
+  // Obter token dos tokens salvos (não de access_token direto)
+  const token = localStorage.getItem("auth_tokens");
+  let accessToken = "";
 
-    if (token) {
-      const tokens = JSON.parse(token);
-      accessToken = tokens.access;
-    }
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    if (accessToken) {
-      headers["Authorization"] = `Bearer ${accessToken}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/auth/v1/auth/me/`, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("❌ Erro na API:", errorData);
-      throw new Error(`Erro ao buscar usuário: ${response.status}`);
-    }
-
-    const user = await response.json();
-
-    // Se o usuário é MASTER, retorna array vazio (vê todos)
-    // Caso contrário, usa authorized_users que vem do Django
-    if (user.perfil === "MASTER") {
-      user.authorized_users = [];
-      return user;
-    }
-
-    // Verificar se authorized_users já vem na resposta do Django
-    if (!user.authorized_users) {
-      // Para outros perfis, tenta buscar a lista de vendedores permitidos
-      try {
-        // Usar apenas Bearer token para evitar CORS com X-API-Key
-        const token = localStorage.getItem("auth_tokens");
-        let accessToken = "";
-
-        if (token) {
-          const tokens = JSON.parse(token);
-          accessToken = tokens.access;
-        }
-
-        const permissionHeaders: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-
-        if (accessToken) {
-          permissionHeaders["Authorization"] = `Bearer ${accessToken}`;
-        }
-
-        const permissionResponse = await fetch(
-          `${API_BASE_URL}/moskit/v1/users/?authorized_for=${user.id}`,
-          {
-            method: "GET",
-            headers: permissionHeaders,
-          },
-        );
-
-        if (permissionResponse.ok) {
-          const allowedUsers = await permissionResponse.json();
-          user.authorized_users = Array.isArray(allowedUsers)
-            ? allowedUsers.map((u: ApiUnknown) => {
-                const candidate = u.id ?? (u as ApiUnknown).moskit_id;
-                return String(candidate ?? "");
-              })
-            : [];
-        } else {
-          user.authorized_users = [];
-        }
-      } catch (e) {
-        user.authorized_users = [];
-      }
-    } else {
-      // authorized_users já veio do Django
-      if (!Array.isArray(user.authorized_users)) {
-        user.authorized_users = [];
-      }
-    }
-
-    return user;
-  } catch (error) {
-    console.error("❌ Erro ao buscar usuário logado:", error);
-    throw error;
+  if (token) {
+    const tokens = JSON.parse(token);
+    accessToken = tokens.access;
   }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/v1/auth/me/`, {
+    method: "GET",
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Erro ao buscar usuário: ${response.status}`);
+  }
+
+  const user = await response.json();
+
+  if (user.perfil === "MASTER") {
+    user.authorized_users = [];
+    return user;
+  }
+
+  if (!user.authorized_users) {
+    try {
+      const token = localStorage.getItem("auth_tokens");
+      let accessToken = "";
+
+      if (token) {
+        const tokens = JSON.parse(token);
+        accessToken = tokens.access;
+      }
+
+      const permissionHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (accessToken) {
+        permissionHeaders["Authorization"] = `Bearer ${accessToken}`;
+      }
+
+      const permissionResponse = await fetch(
+        `${API_BASE_URL}/moskit/v1/users/?authorized_for=${user.id}`,
+        {
+          method: "GET",
+          headers: permissionHeaders,
+        },
+      );
+
+      if (permissionResponse.ok) {
+        const allowedUsers = await permissionResponse.json();
+        user.authorized_users = Array.isArray(allowedUsers)
+          ? allowedUsers.map((u: ApiUnknown) => {
+              const candidate = u.id ?? (u as ApiUnknown).moskit_id;
+              return String(candidate ?? "");
+            })
+          : [];
+      } else {
+        user.authorized_users = [];
+      }
+    } catch (e) {
+      user.authorized_users = [];
+    }
+  } else if (!Array.isArray(user.authorized_users)) {
+    user.authorized_users = [];
+  }
+
+  return user;
 }
 
 /**
  * Busca lista de cargos da API
  */
 export async function fetchRoles(): Promise<ApiRole[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/moskit/v1/roles/`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
+  const response = await fetch(`${API_BASE_URL}/moskit/v1/roles/`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `Erro ao buscar cargos: ${response.status}`,
-      );
-    }
-
-    const payload = await response.json();
-
-    const list = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.results)
-        ? payload.results
-        : [];
-
-    return list
-      .map((role) => {
-        const r = role as ApiUnknown;
-        const id = (r.id || r.role_id || r.slug || r.pk || "") as CareerLevel;
-        const name = String(r.name ?? "");
-        const path: CareerPath =
-          r.path === "leadership" ? "leadership" : "specialist";
-
-        const baseSalary = Number(r.base_salary ?? r.baseSalary ?? 0);
-        const variableMin = numOrUndefined(r.variable_min ?? r.variableMin);
-        const variableMax = numOrUndefined(r.variable_max ?? r.variableMax);
-        const demandMin = numOrUndefined(r.demand_min ?? r.demandMin);
-        const demandMax = numOrUndefined(r.demand_max ?? r.demandMax);
-        const quarterlyStay = numOrUndefined(
-          r.quarterly_stay ?? r.quarterlyStay,
-        );
-        const quarterlyPromotion = numOrUndefined(
-          r.quarterly_promotion ?? r.quarterlyPromotion,
-        );
-
-        return {
-          id,
-          name,
-          path,
-          baseSalary,
-          variableMin,
-          variableMax,
-          demandMin,
-          demandMax,
-          quarterlyStay,
-          quarterlyPromotion,
-          description: r.description ? String(r.description) : undefined,
-          isActive:
-            r.is_active !== undefined
-              ? Boolean(r.is_active)
-              : r.isActive !== undefined
-                ? Boolean(r.isActive)
-                : undefined,
-        } as ApiRole;
-      })
-      .filter((role) => role.id && role.name);
-  } catch (error) {
-    console.error("Erro ao buscar cargos:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || `Erro ao buscar cargos: ${response.status}`,
+    );
   }
+
+  const payload = await response.json();
+
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.results)
+      ? payload.results
+      : [];
+
+  return list
+    .map((role) => {
+      const r = role as ApiUnknown;
+      const id = (r.id || r.role_id || r.slug || r.pk || "") as CareerLevel;
+      const name = String(r.name ?? "");
+      const path: CareerPath =
+        r.path === "leadership" ? "leadership" : "specialist";
+
+      const baseSalary = Number(r.base_salary ?? r.baseSalary ?? 0);
+      const variableMin = numOrUndefined(r.variable_min ?? r.variableMin);
+      const variableMax = numOrUndefined(r.variable_max ?? r.variableMax);
+      const demandMin = numOrUndefined(r.demand_min ?? r.demandMin);
+      const demandMax = numOrUndefined(r.demand_max ?? r.demandMax);
+      const quarterlyStay = numOrUndefined(r.quarterly_stay ?? r.quarterlyStay);
+      const quarterlyPromotion = numOrUndefined(
+        r.quarterly_promotion ?? r.quarterlyPromotion,
+      );
+
+      return {
+        id,
+        name,
+        path,
+        baseSalary,
+        variableMin,
+        variableMax,
+        demandMin,
+        demandMax,
+        quarterlyStay,
+        quarterlyPromotion,
+        description: r.description ? String(r.description) : undefined,
+        isActive:
+          r.is_active !== undefined
+            ? Boolean(r.is_active)
+            : r.isActive !== undefined
+              ? Boolean(r.isActive)
+              : undefined,
+      } as ApiRole;
+    })
+    .filter((role) => role.id && role.name);
 }
 
 /**
@@ -222,92 +201,81 @@ export async function fetchEmployees(filters?: {
   startDate?: string;
   endDate?: string;
 }): Promise<Employee[]> {
-  try {
-    const storedTokens = localStorage.getItem("auth_tokens");
-    let accessToken = "";
+  const storedTokens = localStorage.getItem("auth_tokens");
+  let accessToken = "";
 
-    if (storedTokens) {
-      try {
-        const parsed = JSON.parse(storedTokens);
-        accessToken = parsed.access || "";
-      } catch (e) {
-        // ignore malformed tokens and continue without auth
-      }
+  if (storedTokens) {
+    try {
+      const parsed = JSON.parse(storedTokens);
+      accessToken = parsed.access || "";
+    } catch (e) {
+      // ignore malformed tokens and continue without auth
     }
+  }
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
 
-    if (accessToken) {
-      headers["Authorization"] = `Bearer ${accessToken}`;
-    }
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
 
-    const url = new URL(`${API_BASE_URL}/moskit/v1/dashboard-summary/`);
-    if (filters?.startDate) {
-      url.searchParams.set("start_date", filters.startDate);
-    }
-    if (filters?.endDate) {
-      url.searchParams.set("end_date", filters.endDate);
-    }
+  const url = new URL(`${API_BASE_URL}/moskit/v1/dashboard-summary/`);
+  if (filters?.startDate) {
+    url.searchParams.set("start_date", filters.startDate);
+  }
+  if (filters?.endDate) {
+    url.searchParams.set("end_date", filters.endDate);
+  }
 
-    const response = await fetch(url.toString(), {
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+
+    // Se falhar, tenta fallback com /users/ (endpoint que sempre existe)
+    const fallbackResponse = await fetch(`${API_BASE_URL}/moskit/v1/users/`, {
       method: "GET",
       headers,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-
-      // Se falhar, tenta fallback com /users/ (endpoint que sempre existe)
-      const fallbackResponse = await fetch(`${API_BASE_URL}/moskit/v1/users/`, {
-        method: "GET",
-        headers,
-      });
-
-      if (!fallbackResponse.ok) {
-        const fallbackError = await fallbackResponse.json().catch(() => ({}));
-        throw new Error(
-          fallbackError.detail ||
-            `Erro ao buscar vendedores: ${response.status}`,
-        );
-      }
-
-      const fallbackData = await fallbackResponse.json();
-      return mapApiEmployeesToLocal(fallbackData);
+    if (!fallbackResponse.ok) {
+      const fallbackError = await fallbackResponse.json().catch(() => ({}));
+      throw new Error(
+        fallbackError.detail || `Erro ao buscar vendedores: ${response.status}`,
+      );
     }
 
-    const data = await response.json();
-    return mapApiEmployeesToLocal(data);
-  } catch (error) {
-    console.error("❌ Erro ao buscar funcionários:", error);
-    throw error;
+    const fallbackData = await fallbackResponse.json();
+    return mapApiEmployeesToLocal(fallbackData);
   }
+
+  const data = await response.json();
+  return mapApiEmployeesToLocal(data);
 }
 
 /**
  * Busca um vendedor específico pelo ID
  */
 export async function fetchEmployeeById(id: string): Promise<Employee> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/moskit/v1/users/${id}/`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
+  const response = await fetch(`${API_BASE_URL}/moskit/v1/users/${id}/`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `Erro ao buscar vendedor: ${response.status}`,
-      );
-    }
-
-    const data = await response.json();
-    return mapApiEmployeeToLocal(data);
-  } catch (error) {
-    console.error("Erro ao buscar funcionário:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || `Erro ao buscar vendedor: ${response.status}`,
+    );
   }
+
+  const data = await response.json();
+  return mapApiEmployeeToLocal(data);
 }
 
 /**
@@ -546,8 +514,7 @@ export interface Discount {
   seller: string; // UUID do vendedor
   discount_type: string; // UUID do tipo de desconto
   reference_month?: string; // YYYY-MM ou YYYY-MM-01
-  custom_amount?: number; // Para adiantamento
-  quantity?: number; // Para monster
+  amount?: number; // Valor do desconto em R$
   notes?: string;
   // Campos de resposta
   seller_name?: string;
@@ -621,7 +588,9 @@ export async function fetchDiscounts(
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : data.results || [];
+  const discounts = Array.isArray(data) ? data : data.results || [];
+
+  return discounts;
 }
 
 /**
@@ -665,26 +634,6 @@ export async function createDiscount(discount: Discount): Promise<Discount> {
 
   const result = await response.json();
   return result;
-}
-
-/**
- * Remove um desconto
- */
-export async function deleteDiscount(discountId: string): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/moskit/v1/discounts/${discountId}/`,
-    {
-      method: "DELETE",
-      headers: getAuthHeaders(),
-    },
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.detail || `Erro ao deletar desconto: ${response.status}`,
-    );
-  }
 }
 
 /**

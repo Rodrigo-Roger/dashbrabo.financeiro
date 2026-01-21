@@ -1,14 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import {
-  Users,
-  Percent,
-  Save,
-  Plus,
-  Trash2,
-  DollarSign,
-  Package,
-} from "lucide-react";
+import { Users, Percent, Plus, DollarSign, Package } from "lucide-react";
 import { formatCurrency, Employee, SAMPLE_EMPLOYEES } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,11 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   createDiscount,
   fetchDiscounts,
-  deleteDiscount,
   fetchDiscountTypes,
   type Discount,
   type DiscountType,
@@ -49,8 +40,7 @@ export function DiscountsView({
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedDiscountTypeId, setSelectedDiscountTypeId] =
     useState<string>("");
-  const [customAmount, setCustomAmount] = useState<string>("");
-  const [quantity, setQuantity] = useState<string>("1");
+  const [amount, setAmount] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [referenceMonth, setReferenceMonth] = useState<string>(
     new Date().toISOString().slice(0, 7),
@@ -102,8 +92,6 @@ export function DiscountsView({
     setConsultaMes(composed);
   }, [consultaMonth, consultaYear]);
 
-  const queryClient = useQueryClient();
-
   // Buscar tipos de desconto disponíveis
   const { data: discountTypes = [] } = useQuery({
     queryKey: ["discountTypes"],
@@ -140,8 +128,7 @@ export function DiscountsView({
         refetch();
         // Limpar formulário
         setSelectedDiscountTypeId("");
-        setCustomAmount("");
-        setQuantity("1");
+        setAmount("");
         setNotes("");
         const now = new Date();
         setRefMonth(now.toISOString().slice(5, 7));
@@ -167,23 +154,6 @@ export function DiscountsView({
     },
   );
 
-  const { mutate: deleteDiscountMutation } = useMutation({
-    mutationFn: async (discountId: string) => {
-      return await deleteDiscount(discountId);
-    },
-    onSuccess: () => {
-      toast.success("Desconto removido com sucesso");
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível remover o desconto",
-      );
-    },
-  });
-
   const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
   const selectedDiscountType = discountTypes.find(
     (dt) => dt.id === selectedDiscountTypeId,
@@ -203,44 +173,21 @@ export function DiscountsView({
     const normalizedReferenceMonth =
       referenceMonth.length === 7 ? `${referenceMonth}-01` : referenceMonth;
 
+    // Todos os tipos de desconto usam valor customizado
+    const amountValue = parseFloat(amount);
+    if (!amountValue || amountValue <= 0) {
+      toast.error("Digite um valor válido");
+      return;
+    }
+
     const discountData: Discount = {
       seller: selectedEmployeeId,
       discount_type: selectedDiscountTypeId,
       reference_month: normalizedReferenceMonth,
+      amount: amountValue,
       notes: notes || undefined,
     };
 
-    // Se requer quantidade (Monster), adiciona quantidade e resolve o valor
-    if (selectedDiscountType?.requires_quantity) {
-      const fixed = selectedDiscountType.fixed_amount
-        ? parseFloat(selectedDiscountType.fixed_amount)
-        : NaN;
-
-      // Backend calcula total_discount com discount_type.fixed_amount; se vier vazio/zero, bloquear
-      if (!Number.isFinite(fixed) || fixed <= 0) {
-        toast.error(
-          "Tipo de desconto sem valor fixo configurado. Defina o valor unitário no cadastro do tipo.",
-        );
-        return;
-      }
-
-      const qty = parseInt(quantity);
-      if (!qty || qty <= 0) {
-        toast.error("Digite uma quantidade válida");
-        return;
-      }
-      discountData.quantity = qty;
-      // Enviar o valor unitário fixo para referência (mesmo que backend use o discount_type)
-      discountData.custom_amount = fixed;
-    } else {
-      // Se não requer quantidade (Adiantamento), adiciona custom_amount total
-      const amount = parseFloat(customAmount);
-      if (!amount || amount <= 0) {
-        toast.error("Digite um valor válido");
-        return;
-      }
-      discountData.custom_amount = amount;
-    }
     createDiscountMutation(discountData);
   };
 
@@ -326,7 +273,7 @@ export function DiscountsView({
                   {discountTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       <div className="flex items-center gap-2">
-                        {type.requires_quantity ? (
+                        {type.code === "MONSTER" ? (
                           <Package className="h-4 w-4" />
                         ) : (
                           <DollarSign className="h-4 w-4" />
@@ -334,9 +281,7 @@ export function DiscountsView({
                         <div className="flex flex-col">
                           <span>{type.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {type.fixed_amount
-                              ? `R$ ${type.fixed_amount} por unidade`
-                              : "Valor customizável"}
+                            Valor customizável
                           </span>
                         </div>
                       </div>
@@ -375,46 +320,19 @@ export function DiscountsView({
               </p>
             </div>
 
-            {selectedDiscountType?.requires_quantity ? (
-              <div className="space-y-2">
-                <Label>Quantidade</Label>
-                <Input
-                  type="number"
-                  placeholder="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  min="1"
-                />
-                {selectedDiscountType.fixed_amount && (
-                  <p className="text-sm text-muted-foreground">
-                    Total:{" "}
-                    {formatCurrency(
-                      parseFloat(selectedDiscountType.fixed_amount) *
-                        parseInt(quantity || "0"),
-                    )}
-                  </p>
-                )}
-                {!selectedDiscountType.fixed_amount && (
-                  <p className="text-sm text-destructive">
-                    Defina um valor fixo para este tipo no backend para liberar
-                    o cadastro.
-                  </p>
-                )}
-              </div>
-            ) : selectedDiscountType &&
-              !selectedDiscountType.requires_quantity ? (
+            {selectedDiscountTypeId && (
               <div className="space-y-2">
                 <Label>Valor do Desconto</Label>
                 <Input
-                  type="number"
+                  type="tel"
                   placeholder="0.00"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
                   step="0.01"
                   min="0"
                 />
               </div>
-            ) : null}
+            )}
 
             {selectedDiscountTypeId && (
               <div className="space-y-2">
@@ -533,8 +451,7 @@ export function DiscountsView({
                       >
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <div className="flex items-start gap-3 flex-1">
-                            {discount.discount_type &&
-                            "requires_quantity" in discount.discount_type ? (
+                            {discount.discount_type_code === "MONSTER" ? (
                               <Package className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
                             ) : (
                               <DollarSign className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
@@ -542,16 +459,6 @@ export function DiscountsView({
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-foreground">
                                 {discount.discount_type_name}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {discount.reference_month
-                                  ? new Date(
-                                      discount.reference_month + "-01",
-                                    ).toLocaleDateString("pt-BR", {
-                                      month: "long",
-                                      year: "numeric",
-                                    })
-                                  : "Sem mês"}
                               </p>
                               {discount.created_at && (
                                 <p className="text-xs text-muted-foreground/70">
@@ -570,31 +477,11 @@ export function DiscountsView({
                           </div>
                         </div>
 
-                        {discount.quantity && (
-                          <p className="text-xs bg-green-50/50 dark:bg-green-950/20 text-green-700 dark:text-green-300 px-2 py-1 rounded w-fit">
-                            {discount.quantity}x unidades
-                          </p>
-                        )}
-
                         {discount.notes && (
                           <p className="text-xs text-muted-foreground italic mt-2 border-l-2 border-muted-foreground/30 pl-2">
                             {discount.notes}
                           </p>
                         )}
-
-                        <div className="flex justify-end mt-3">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() =>
-                              discount.id && deleteDiscountMutation(discount.id)
-                            }
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Remover
-                          </Button>
-                        </div>
                       </div>
                     ))}
 

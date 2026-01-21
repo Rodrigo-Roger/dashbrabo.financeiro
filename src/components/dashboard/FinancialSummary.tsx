@@ -42,9 +42,6 @@ export function FinancialSummary({
         if (dateFilter?.startDate && dateFilter?.endDate) {
           const startDate = new Date(dateFilter.startDate);
           const endDate = new Date(dateFilter.endDate);
-          console.log(
-            `📅 Filtrando descontos de ${employee.name} entre ${startDate} e ${endDate}`,
-          );
           // getTotalDiscounts já retorna o valor total, aqui apenas aplicamos o filtro
           discounts[employee.id] = allDiscounts;
         } else {
@@ -80,7 +77,7 @@ export function FinancialSummary({
     { baseSalary: 0, variablePay: 0, bonuses: 0, discounts: 0, total: 0 },
   );
 
-  const metrics = [
+  const mainMetrics = [
     {
       label: "Salários Base",
       value: totals.baseSalary,
@@ -109,31 +106,27 @@ export function FinancialSummary({
       description: "Adiantamentos e Monster",
       color: "bg-destructive/10 text-destructive",
     },
-    {
-      label: "Total Mensal",
-      value: totals.total,
-      icon: DollarSign,
-      description: "Base + Variável + Bônus - Descontos",
-      color: "bg-primary text-primary-foreground",
-      highlight: true,
-    },
   ];
+
+  const totalMetric = {
+    label: "Total Mensal",
+    value: totals.total,
+    icon: DollarSign,
+    description: "Base + Variável + Bônus - Descontos",
+    color: "bg-primary text-primary-foreground",
+    highlight: true,
+  };
 
   return (
     <div className={cn("space-y-5", className)}>
       {/* Main KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric) => {
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {mainMetrics.map((metric) => {
           const Icon = metric.icon;
           return (
             <div
               key={metric.label}
-              className={cn(
-                "rounded-lg border p-5",
-                metric.highlight
-                  ? "bg-card border-primary/40 ring-1 ring-primary/20"
-                  : "bg-card border-border",
-              )}
+              className={cn("rounded-lg border p-5 bg-card border-border")}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1 min-w-0">
@@ -150,9 +143,7 @@ export function FinancialSummary({
                 <div
                   className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                    metric.highlight
-                      ? "bg-primary/15 text-primary"
-                      : metric.color,
+                    metric.color,
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -161,6 +152,26 @@ export function FinancialSummary({
             </div>
           );
         })}
+      </div>
+
+      {/* Total Mensal Card */}
+      <div className="rounded-lg border border-primary/40 bg-card p-5 ring-1 ring-primary/20">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1 min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">
+              {totalMetric.label}
+            </p>
+            <p className="text-3xl font-bold tracking-tight text-foreground">
+              {formatCurrency(totalMetric.value)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {totalMetric.description}
+            </p>
+          </div>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <totalMetric.icon className="h-5 w-5" />
+          </div>
+        </div>
       </div>
 
       {/* Breakdown Table */}

@@ -192,7 +192,7 @@ export function calculateVariablePay(role: RoleConfig, demand: number): number {
   const demandRange = role.demandMax - role.demandMin;
   const demandPosition = Math.min(
     Math.max(demand - role.demandMin, 0),
-    demandRange
+    demandRange,
   );
   const variableRange = role.variableMax - role.variableMin;
   const variablePercent =
@@ -209,7 +209,7 @@ export function calculateVariableFromTargets(
   implantadosAtual?: number,
   metaImplantados?: number,
   assinadosAtual?: number,
-  metaAssinados?: number
+  metaAssinados?: number,
 ): number {
   // Usa apenas implantados como "demanda" para o cálculo
   const demandValue = implantadosAtual || 0;
@@ -246,7 +246,7 @@ export function calculateVariableFromTargets(
 // Calculate team bonus for technical leaders
 export function calculateTeamBonus(
   teamSize: number,
-  avgPerformance: number
+  avgPerformance: number,
 ): number {
   // R$500-R$900 based on team performance
   const baseBonus = 500;
@@ -275,7 +275,7 @@ export function calculateUnitAddOn(unitRevenue: number): number {
 export function getPerformanceStatus(
   quarterlyRevenue: number,
   quarterlyStay?: number,
-  quarterlyPromotion?: number
+  quarterlyPromotion?: number,
 ): PerformanceStatus {
   if (quarterlyPromotion && quarterlyRevenue >= quarterlyPromotion) {
     return "eligible_promotion";
@@ -299,7 +299,7 @@ export function getHealthCoverage(tenure: number): string {
 // Calculate total compensation
 export function calculateCompensation(
   employee: Employee,
-  rolesMap?: RoleMap
+  rolesMap?: RoleMap,
 ): Compensation {
   const role = (rolesMap ?? ROLES)[employee.role];
   const baseSalary = role.baseSalary;
@@ -313,7 +313,7 @@ export function calculateCompensation(
       employee.implantadosAtual,
       employee.metaImplantados,
       employee.assinadosAtual,
-      employee.metaAssinados
+      employee.metaAssinados,
     );
   } else {
     // FALLBACK: Só usa currentDemand se não tiver implantados
@@ -408,8 +408,8 @@ export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
