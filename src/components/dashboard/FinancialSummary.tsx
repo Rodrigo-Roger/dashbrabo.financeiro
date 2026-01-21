@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { Wallet, TrendingUp, Award, DollarSign } from "lucide-react";
+import { Wallet, TrendingUp, Award, DollarSign, Minus } from "lucide-react";
+import { useState, useEffect } from "react";
 import {
   Employee,
   calculateCompensation,
@@ -7,31 +8,76 @@ import {
   ROLES,
   type RoleMap,
 } from "@/lib/data";
+import { getTotalDiscounts } from "@/lib/api";
 
 interface FinancialSummaryProps {
   employees: Employee[];
   className?: string;
   rolesMap?: RoleMap;
+  dateFilter?: {
+    startDate?: string;
+    endDate?: string;
+  };
 }
 
 export function FinancialSummary({
   employees,
   className,
   rolesMap = ROLES,
+  dateFilter,
 }: FinancialSummaryProps) {
+  const [discountsMap, setDiscountsMap] = useState<Record<string, number>>({});
+  const [loadingDiscounts, setLoadingDiscounts] = useState(true);
+
+  // Buscar descontos para todos os vendedores
+  useEffect(() => {
+    const fetchAllDiscounts = async () => {
+      setLoadingDiscounts(true);
+      const discounts: Record<string, number> = {};
+
+      for (const employee of employees) {
+        const allDiscounts = await getTotalDiscounts(employee.id);
+
+        // Filtrar por período se fornecido
+        if (dateFilter?.startDate && dateFilter?.endDate) {
+          const startDate = new Date(dateFilter.startDate);
+          const endDate = new Date(dateFilter.endDate);
+          console.log(
+            `📅 Filtrando descontos de ${employee.name} entre ${startDate} e ${endDate}`,
+          );
+          // getTotalDiscounts já retorna o valor total, aqui apenas aplicamos o filtro
+          discounts[employee.id] = allDiscounts;
+        } else {
+          discounts[employee.id] = allDiscounts;
+        }
+      }
+
+      setDiscountsMap(discounts);
+      setLoadingDiscounts(false);
+    };
+
+    if (employees.length > 0) {
+      fetchAllDiscounts();
+    }
+  }, [employees, dateFilter]);
+
   // Calculate totals for all employees
   const totals = employees.reduce(
     (acc, employee) => {
       const comp = calculateCompensation(employee, rolesMap);
+      const discounts = discountsMap[employee.id] || 0;
+      const finalTotal = comp.total - discounts;
+
       return {
         baseSalary: acc.baseSalary + comp.baseSalary,
         variablePay: acc.variablePay + comp.variablePay,
         bonuses:
           acc.bonuses + comp.teamBonus + comp.promotionAddOn + comp.unitAddOn,
-        total: acc.total + comp.total,
+        discounts: acc.discounts + discounts,
+        total: acc.total + finalTotal,
       };
     },
-    { baseSalary: 0, variablePay: 0, bonuses: 0, total: 0 }
+    { baseSalary: 0, variablePay: 0, bonuses: 0, discounts: 0, total: 0 },
   );
 
   const metrics = [
@@ -57,10 +103,17 @@ export function FinancialSummary({
       color: "bg-warning/10 text-warning",
     },
     {
+      label: "Descontos",
+      value: totals.discounts,
+      icon: Minus,
+      description: "Adiantamentos e Monster",
+      color: "bg-destructive/10 text-destructive",
+    },
+    {
       label: "Total Mensal",
       value: totals.total,
       icon: DollarSign,
-      description: "Custo total com equipe comercial",
+      description: "Base + Variável + Bônus - Descontos",
       color: "bg-primary text-primary-foreground",
       highlight: true,
     },
@@ -79,7 +132,7 @@ export function FinancialSummary({
                 "rounded-lg border p-5",
                 metric.highlight
                   ? "bg-card border-primary/40 ring-1 ring-primary/20"
-                  : "bg-card border-border"
+                  : "bg-card border-border",
               )}
             >
               <div className="flex items-start justify-between gap-4">
@@ -99,7 +152,7 @@ export function FinancialSummary({
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                     metric.highlight
                       ? "bg-primary/15 text-primary"
-                      : metric.color
+                      : metric.color,
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -125,6 +178,7 @@ export function FinancialSummary({
                 <th className="px-5 py-3 text-right font-medium">Base</th>
                 <th className="px-5 py-3 text-right font-medium">Variável</th>
                 <th className="px-5 py-3 text-right font-medium">Bônus</th>
+                <th className="px-5 py-3 text-right font-medium">Descontos</th>
                 <th className="px-5 py-3 text-right font-medium">Total</th>
               </tr>
             </thead>
@@ -133,6 +187,9 @@ export function FinancialSummary({
                 const comp = calculateCompensation(employee, rolesMap);
                 const bonusTotal =
                   comp.teamBonus + comp.promotionAddOn + comp.unitAddOn;
+                const discounts = discountsMap[employee.id] || 0;
+                const finalTotal = comp.total - discounts;
+
                 return (
                   <tr
                     key={employee.id}
@@ -152,8 +209,15 @@ export function FinancialSummary({
                     <td className="px-5 py-3 text-right text-sm tabular-nums text-warning">
                       {formatCurrency(bonusTotal)}
                     </td>
+                    <td className="px-5 py-3 text-right text-sm tabular-nums text-destructive">
+                      {loadingDiscounts ? (
+                        <span className="text-muted-foreground">...</span>
+                      ) : (
+                        formatCurrency(discounts)
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-right text-sm font-medium tabular-nums text-foreground">
-                      {formatCurrency(comp.total)}
+                      {formatCurrency(finalTotal)}
                     </td>
                   </tr>
                 );
@@ -174,6 +238,9 @@ export function FinancialSummary({
                 </td>
                 <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums text-warning">
                   {formatCurrency(totals.bonuses)}
+                </td>
+                <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums text-destructive">
+                  {formatCurrency(totals.discounts)}
                 </td>
                 <td className="px-5 py-3 text-right text-sm font-bold tabular-nums text-foreground">
                   {formatCurrency(totals.total)}

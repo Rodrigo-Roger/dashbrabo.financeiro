@@ -67,7 +67,7 @@ export default function Index() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("team");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
-    null
+    null,
   );
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>();
@@ -134,7 +134,7 @@ export default function Index() {
   const selectedEmployee = useMemo(
     () =>
       employeeList.find((e) => e.id === selectedEmployeeId) || employeeList[0],
-    [selectedEmployeeId, employeeList]
+    [selectedEmployeeId, employeeList],
   );
 
   const compensation = useMemo(() => {
@@ -238,7 +238,11 @@ export default function Index() {
                 Custo total mensal com equipe comercial
               </p>
             </div>
-            <FinancialSummary employees={employeeList} rolesMap={rolesMap} />
+            <FinancialSummary
+              employees={employeeList}
+              rolesMap={rolesMap}
+              dateFilter={appliedFilters}
+            />
           </div>
         );
 
@@ -300,13 +304,17 @@ export default function Index() {
           <div className="space-y-5">
             <div className="border-b border-border pb-4">
               <h2 className="text-lg font-semibold text-foreground">
-                Descontos 
+                Descontos
               </h2>
               <p className="text-sm text-muted-foreground">
                 Descontos de monster e adiantamentos
               </p>
             </div>
-            <DiscountsView employees={employeeList} rolesMap={rolesMap} />
+            <DiscountsView
+              employees={employeeList}
+              rolesMap={rolesMap}
+              dateFilter={appliedFilters}
+            />
           </div>
         );
 
@@ -356,7 +364,7 @@ export default function Index() {
                     value={formatCurrency(
                       compensation.teamBonus +
                         compensation.promotionAddOn +
-                        compensation.unitAddOn
+                        compensation.unitAddOn,
                     )}
                     subtitle="Este mês"
                     icon={Award}

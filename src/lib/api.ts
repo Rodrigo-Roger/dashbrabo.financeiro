@@ -7,6 +7,9 @@ const API_BASE_URL =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
   "http://127.0.0.1:8000/api";
 
+// Cache de mapeamento moskit_id → UUID
+const moskitIdToUuidCache = new Map<string, string>();
+
 export interface ApiRole {
   id: CareerLevel;
   name: string;
@@ -55,16 +58,10 @@ export async function fetchCurrentUser(): Promise<{
       headers["Authorization"] = `Bearer ${accessToken}`;
     }
 
-    console.log("🔍 Buscando informações do usuário logado...");
-    console.log("📋 Headers sendo enviados:", headers);
-    console.log("📋 Token encontrado:", !!accessToken);
-
     const response = await fetch(`${API_BASE_URL}/auth/v1/auth/me/`, {
       method: "GET",
       headers,
     });
-
-    console.log("📥 Status da resposta:", response.status);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -73,22 +70,16 @@ export async function fetchCurrentUser(): Promise<{
     }
 
     const user = await response.json();
-    console.log("👤 Dados do usuário:", user);
 
     // Se o usuário é MASTER, retorna array vazio (vê todos)
     // Caso contrário, usa authorized_users que vem do Django
     if (user.perfil === "MASTER") {
       user.authorized_users = [];
-      console.log("🔓 MASTER - acesso a todos os vendedores");
       return user;
     }
 
     // Verificar se authorized_users já vem na resposta do Django
     if (!user.authorized_users) {
-      console.log(
-        "⚠️ authorized_users não retornou do Django, tentando buscar via API...",
-      );
-
       // Para outros perfis, tenta buscar a lista de vendedores permitidos
       try {
         // Usar apenas Bearer token para evitar CORS com X-API-Key
@@ -108,7 +99,6 @@ export async function fetchCurrentUser(): Promise<{
           permissionHeaders["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        console.log("🔐 Buscando usuários permitidos para ID:", user.id);
         const permissionResponse = await fetch(
           `${API_BASE_URL}/moskit/v1/users/?authorized_for=${user.id}`,
           {
@@ -125,28 +115,14 @@ export async function fetchCurrentUser(): Promise<{
                 return String(candidate ?? "");
               })
             : [];
-          console.log(
-            "✅ Usuários permitidos encontrados (como strings):",
-            user.authorized_users,
-          );
         } else {
-          console.warn(
-            "⚠️ Endpoint de usuários permitidos retornou status:",
-            permissionResponse.status,
-          );
           user.authorized_users = [];
         }
       } catch (e) {
-        console.warn("⚠️ Não foi possível buscar usuários permitidos:", e);
         user.authorized_users = [];
       }
     } else {
       // authorized_users já veio do Django
-      console.log(
-        "✅ authorized_users retornado do Django:",
-        user.authorized_users,
-      );
-      // Garantir que é um array
       if (!Array.isArray(user.authorized_users)) {
         user.authorized_users = [];
       }
@@ -184,10 +160,6 @@ export async function fetchRoles(): Promise<ApiRole[]> {
         ? payload.results
         : [];
 
-    console.log(
-      "✅ Cargos recebidos:",
-      Array.isArray(list) ? `${list.length} itens` : typeof list,
-    );
     return list
       .map((role) => {
         const r = role as ApiUnknown;
@@ -207,15 +179,6 @@ export async function fetchRoles(): Promise<ApiRole[]> {
         const quarterlyPromotion = numOrUndefined(
           r.quarterly_promotion ?? r.quarterlyPromotion,
         );
-
-        console.log("📦 Cargo mapeado:", {
-          id,
-          name,
-          baseSalary,
-          variableMin,
-          variableMax,
-          tipo: typeof baseSalary,
-        });
 
         return {
           id,
@@ -260,9 +223,6 @@ export async function fetchEmployees(filters?: {
   endDate?: string;
 }): Promise<Employee[]> {
   try {
-    console.log("🔍 Iniciando busca de vendedores (filtrado por backend)...");
-
-    // Recupera token dos auth_tokens (não access_token direto)
     const storedTokens = localStorage.getItem("auth_tokens");
     let accessToken = "";
 
@@ -270,15 +230,9 @@ export async function fetchEmployees(filters?: {
       try {
         const parsed = JSON.parse(storedTokens);
         accessToken = parsed.access || "";
-        console.log(
-          "✅ Token recuperado de auth_tokens (primeiros 20 chars):",
-          accessToken.substring(0, 20) + "...",
-        );
       } catch (e) {
-        console.warn("⚠️ Não foi possível parsear auth_tokens:", e);
+        // ignore malformed tokens and continue without auth
       }
-    } else {
-      console.warn("⚠️ auth_tokens não encontrado no localStorage");
     }
 
     const headers: Record<string, string> = {
@@ -320,37 +274,11 @@ export async function fetchEmployees(filters?: {
       }
 
       const fallbackData = await fallbackResponse.json();
-      console.log(
-        "✅ Dados do fallback:",
-        Array.isArray(fallbackData)
-          ? `${fallbackData.length} vendedores`
-          : fallbackData,
-      );
-      const result = mapApiEmployeesToLocal(fallbackData);
-      console.log("✅ Vendedores mapeados (fallback):", result.length, "itens");
-      return result;
+      return mapApiEmployeesToLocal(fallbackData);
     }
 
     const data = await response.json();
-    console.log(
-      "✅ Dashboard-summary retornou:",
-      Array.isArray(data) ? `${data.length} vendedores` : typeof data,
-    );
-    console.log(
-      "📊 Resposta completa (primeiros 500 chars):",
-      JSON.stringify(data).substring(0, 500),
-    );
-    console.log(
-      "📊 Tipo da resposta:",
-      typeof data,
-      "É array?",
-      Array.isArray(data),
-    );
-
-    // Mapear resposta da API para o formato esperado
-    const result = mapApiEmployeesToLocal(data);
-    console.log("✅ Vendedores mapeados:", result.length, "itens");
-    return result;
+    return mapApiEmployeesToLocal(data);
   } catch (error) {
     console.error("❌ Erro ao buscar funcionários:", error);
     throw error;
@@ -387,8 +315,15 @@ export async function fetchEmployeeById(id: string): Promise<Employee> {
  * Ajuste os campos conforme a resposta da sua API
  */
 function mapApiEmployeeToLocal(apiData: ApiUnknown): Employee {
-  // Tentar extrair ID de várias possíveis localizações
-  const id = String(apiData.id ?? apiData.user_id ?? apiData.pk ?? "");
+  // Tentar extrair ID de várias possíveis localizações (fallback para moskit_id/username)
+  const rawId =
+    apiData.id ??
+    apiData.user_id ??
+    apiData.pk ??
+    apiData.moskit_id ??
+    apiData.username ??
+    "";
+  const id = String(rawId);
 
   // Tentar extrair nome de várias possíveis localizações
   const email = typeof apiData.email === "string" ? apiData.email : "";
@@ -400,8 +335,6 @@ function mapApiEmployeeToLocal(apiData: ApiUnknown): Employee {
       (email ? email.split("@")[0] : "") ||
       "",
   );
-
-  console.log("🔍 Mapeando usuário:", { id, name, apiData });
 
   const role = mapPerfilToRole(
     apiData.role || apiData.role_id || apiData.roleId || apiData.perfil,
@@ -472,18 +405,7 @@ function mapApiEmployeesToLocal(
 ): Employee[] {
   // Se não é array, tenta extrair array de propriedades comuns
   if (!Array.isArray(apiDataList)) {
-    console.warn("⚠️ Resposta não é um array direto:", typeof apiDataList);
-
     if (typeof apiDataList === "object" && apiDataList !== null) {
-      // Log da estrutura paginada (count, next, previous, results)
-      if ("count" in apiDataList) {
-        console.log(
-          `📊 Resposta paginada: ${apiDataList.count} total, próxima: ${
-            (apiDataList as ApiUnknown).next ? "sim" : "não"
-          }`,
-        );
-      }
-
       // Tenta propriedades comuns que APIs paginated usam
       let arrayData: ApiUnknown[] | null = null;
 
@@ -491,31 +413,15 @@ function mapApiEmployeesToLocal(
 
       if (Array.isArray(apiObj.results)) {
         arrayData = apiObj.results as ApiUnknown[];
-        console.log(
-          "✅ Array encontrado em propriedade 'results':",
-          arrayData.length,
-        );
       } else if (Array.isArray(apiObj.data)) {
         arrayData = apiObj.data as ApiUnknown[];
-        console.log(
-          "✅ Array encontrado em propriedade 'data':",
-          arrayData.length,
-        );
       } else if (Array.isArray(apiObj.items)) {
         arrayData = apiObj.items as ApiUnknown[];
-        console.log(
-          "✅ Array encontrado em propriedade 'items':",
-          arrayData.length,
-        );
       } else {
         // Procura por qualquer propriedade que seja um array
-        for (const [key, value] of Object.entries(apiObj)) {
+        for (const value of Object.values(apiObj)) {
           if (Array.isArray(value)) {
             arrayData = value as ApiUnknown[];
-            console.log(
-              `✅ Array encontrado em propriedade '${key}':`,
-              arrayData.length,
-            );
             break;
           }
         }
@@ -526,11 +432,9 @@ function mapApiEmployeesToLocal(
       }
     }
 
-    console.warn("⚠️ Nenhum array encontrado na resposta");
     return [];
   }
 
-  console.log(`📊 Mapeando ${apiDataList.length} usuários...`);
   return apiDataList.map(mapApiEmployeeToLocal).filter((emp) => emp.id);
 }
 
@@ -641,6 +545,7 @@ export interface Discount {
   id?: string;
   seller: string; // UUID do vendedor
   discount_type: string; // UUID do tipo de desconto
+  reference_month?: string; // YYYY-MM ou YYYY-MM-01
   custom_amount?: number; // Para adiantamento
   quantity?: number; // Para monster
   notes?: string;
@@ -649,20 +554,25 @@ export interface Discount {
   discount_type_name?: string;
   discount_type_code?: string;
   total_discount?: string;
+  reference_month_display?: string;
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;
 }
 
 /**
- * Busca todos os descontos de um funcionário
+ * Converte moskit_id para UUID do UserMoskit
+ * Usa cache para evitar requisições múltiplas
  */
-export async function fetchDiscounts(employeeId: string): Promise<Discount[]> {
-  try {
-    console.log("🔍 Buscando descontos para seller:", employeeId);
+export async function getMoskitUserUuid(moskitId: string): Promise<string> {
+  // Verificar cache
+  if (moskitIdToUuidCache.has(moskitId)) {
+    return moskitIdToUuidCache.get(moskitId)!;
+  }
 
+  try {
     const response = await fetch(
-      `${API_BASE_URL}/moskit/v1/discounts/?seller=${employeeId}`,
+      `${API_BASE_URL}/moskit/v1/users/?moskit_id=${moskitId}`,
       {
         method: "GET",
         headers: getAuthHeaders(),
@@ -670,19 +580,63 @@ export async function fetchDiscounts(employeeId: string): Promise<Discount[]> {
     );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("❌ Erro ao buscar:", errorData);
-      throw new Error(
-        errorData.detail || `Erro ao buscar descontos: ${response.status}`,
-      );
+      return moskitId;
     }
 
     const data = await response.json();
-    console.log("✅ Descontos recebidos:", data);
-    return Array.isArray(data) ? data : data.results || [];
+    const users = Array.isArray(data) ? data : data.results || [];
+
+    if (users.length > 0) {
+      const uuid = users[0].id;
+      moskitIdToUuidCache.set(moskitId, uuid);
+      return uuid;
+    }
+
+    return moskitId;
   } catch (error) {
-    console.error("❌ Erro ao buscar descontos:", error);
-    throw error;
+    return moskitId;
+  }
+}
+
+/**
+ * Busca todos os descontos de um funcionário
+ * Converte moskit_id para UUID se necessário
+ */
+export async function fetchDiscounts(
+  employeeIdOrMoskitId: string,
+): Promise<Discount[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/moskit/v1/discounts/?seller=${employeeIdOrMoskitId}`,
+    {
+      method: "GET",
+      headers: getAuthHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || `Erro ao buscar descontos: ${response.status}`,
+    );
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.results || [];
+}
+
+/**
+ * Calcula o total de descontos para um vendedor
+ */
+export async function getTotalDiscounts(employeeId: string): Promise<number> {
+  try {
+    const discounts = await fetchDiscounts(employeeId);
+    const total = discounts.reduce((sum, discount) => {
+      const amount = Number(discount.total_discount || 0);
+      return sum + (Number.isFinite(amount) ? amount : 0);
+    }, 0);
+    return total;
+  } catch (error) {
+    return 0;
   }
 }
 
@@ -690,63 +644,46 @@ export async function fetchDiscounts(employeeId: string): Promise<Discount[]> {
  * Cria um novo desconto
  */
 export async function createDiscount(discount: Discount): Promise<Discount> {
-  try {
-    // Remove campos undefined/null
-    const payload = Object.fromEntries(
-      Object.entries(discount).filter(([, v]) => v !== undefined && v !== null),
+  const payload = Object.fromEntries(
+    Object.entries(discount).filter(([, v]) => v !== undefined && v !== null),
+  );
+
+  const response = await fetch(`${API_BASE_URL}/moskit/v1/discounts/`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail ||
+        JSON.stringify(errorData) ||
+        `Erro ao criar desconto: ${response.status}`,
     );
-
-    console.log("📤 Enviando desconto:", payload);
-
-    const response = await fetch(`${API_BASE_URL}/moskit/v1/discounts/`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("❌ Erro da API:", errorData);
-      throw new Error(
-        errorData.detail ||
-          JSON.stringify(errorData) ||
-          `Erro ao criar desconto: ${response.status}`,
-      );
-    }
-
-    const result = await response.json();
-    console.log("✅ Desconto criado:", result);
-    return result;
-  } catch (error) {
-    console.error("❌ Erro ao criar desconto:", error);
-    throw error;
   }
+
+  const result = await response.json();
+  return result;
 }
 
 /**
  * Remove um desconto
  */
 export async function deleteDiscount(discountId: string): Promise<void> {
-  try {
-    console.log("🗑️ Deletando desconto:", discountId);
+  const response = await fetch(
+    `${API_BASE_URL}/moskit/v1/discounts/${discountId}/`,
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    },
+  );
 
-    const response = await fetch(
-      `${API_BASE_URL}/moskit/v1/discounts/${discountId}/`,
-      {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      },
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || `Erro ao deletar desconto: ${response.status}`,
     );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `Erro ao deletar desconto: ${response.status}`,
-      );
-    }
-  } catch (error) {
-    console.error("❌ Erro ao deletar desconto:", error);
-    throw error;
   }
 }
 
@@ -768,28 +705,19 @@ export interface DiscountType {
  * Busca os tipos de desconto disponíveis
  */
 export async function fetchDiscountTypes(): Promise<DiscountType[]> {
-  try {
-    console.log("🔍 Buscando tipos de desconto...");
+  const response = await fetch(`${API_BASE_URL}/moskit/v1/discount-types/`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
 
-    const response = await fetch(`${API_BASE_URL}/moskit/v1/discount-types/`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("❌ Erro ao buscar tipos:", errorData);
-      throw new Error(
-        errorData.detail ||
-          `Erro ao buscar tipos de desconto: ${response.status}`,
-      );
-    }
-
-    const data = await response.json();
-    console.log("✅ Tipos de desconto recebidos:", data);
-    return Array.isArray(data) ? data : data.results || [];
-  } catch (error) {
-    console.error("❌ Erro ao buscar tipos de desconto:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail ||
+        `Erro ao buscar tipos de desconto: ${response.status}`,
+    );
   }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.results || [];
 }

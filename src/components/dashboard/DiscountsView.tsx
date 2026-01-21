@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
   Users,
@@ -35,11 +35,16 @@ import {
 interface DiscountsViewProps {
   employees?: Employee[];
   className?: string;
+  dateFilter?: {
+    startDate?: string;
+    endDate?: string;
+  };
 }
 
 export function DiscountsView({
   employees = SAMPLE_EMPLOYEES,
   className,
+  dateFilter,
 }: DiscountsViewProps) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedDiscountTypeId, setSelectedDiscountTypeId] =
@@ -47,6 +52,56 @@ export function DiscountsView({
   const [customAmount, setCustomAmount] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("1");
   const [notes, setNotes] = useState<string>("");
+  const [referenceMonth, setReferenceMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7),
+  );
+  const [refMonth, setRefMonth] = useState<string>(
+    new Date().toISOString().slice(5, 7),
+  );
+  const [refYear, setRefYear] = useState<string>(
+    new Date().getFullYear().toString(),
+  );
+
+  // Filtros de consulta (lado direito)
+  const [consultaVendedorId, setConsultaVendedorId] = useState<string>("");
+  const [consultaMes, setConsultaMes] = useState<string>(
+    new Date().toISOString().slice(0, 7),
+  );
+  const [consultaMonth, setConsultaMonth] = useState<string>(
+    new Date().toISOString().slice(5, 7),
+  );
+  const [consultaYear, setConsultaYear] = useState<string>(
+    new Date().getFullYear().toString(),
+  );
+
+  const monthOptions = useMemo(
+    () => [
+      { value: "01", label: "janeiro" },
+      { value: "02", label: "fevereiro" },
+      { value: "03", label: "março" },
+      { value: "04", label: "abril" },
+      { value: "05", label: "maio" },
+      { value: "06", label: "junho" },
+      { value: "07", label: "julho" },
+      { value: "08", label: "agosto" },
+      { value: "09", label: "setembro" },
+      { value: "10", label: "outubro" },
+      { value: "11", label: "novembro" },
+      { value: "12", label: "dezembro" },
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    const composed = `${refYear}-${refMonth}`;
+    setReferenceMonth(composed);
+  }, [refMonth, refYear]);
+
+  useEffect(() => {
+    const composed = `${consultaYear}-${consultaMonth}`;
+    setConsultaMes(composed);
+  }, [consultaMonth, consultaYear]);
+
   const queryClient = useQueryClient();
 
   // Buscar tipos de desconto disponíveis
@@ -55,7 +110,7 @@ export function DiscountsView({
     queryFn: fetchDiscountTypes,
   });
 
-  // Buscar descontos do funcionário selecionado
+  // Buscar descontos do funcionário selecionado para adicionar
   const { data: discounts = [], refetch } = useQuery({
     queryKey: ["discounts", selectedEmployeeId],
     queryFn: () =>
@@ -63,6 +118,16 @@ export function DiscountsView({
         ? fetchDiscounts(selectedEmployeeId)
         : Promise.resolve([]),
     enabled: !!selectedEmployeeId,
+  });
+
+  // Buscar descontos do funcionário selecionado para consulta
+  const { data: discountosConsulta = [] } = useQuery({
+    queryKey: ["discounts", consultaVendedorId],
+    queryFn: () =>
+      consultaVendedorId
+        ? fetchDiscounts(consultaVendedorId)
+        : Promise.resolve([]),
+    enabled: !!consultaVendedorId,
   });
 
   const { mutate: createDiscountMutation, isPending: isCreating } = useMutation(
@@ -78,13 +143,26 @@ export function DiscountsView({
         setCustomAmount("");
         setQuantity("1");
         setNotes("");
+        const now = new Date();
+        setRefMonth(now.toISOString().slice(5, 7));
+        setRefYear(now.getFullYear().toString());
       },
       onError: (error) => {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Não foi possível adicionar o desconto",
-        );
+        let errorMessage = "Não foi possível adicionar o desconto";
+
+        if (error instanceof Error) {
+          if (
+            error.message.includes("set único") ||
+            error.message.includes("unique")
+          ) {
+            errorMessage =
+              "Já existe um desconto deste tipo para este vendedor neste mês";
+          } else {
+            errorMessage = error.message;
+          }
+        }
+
+        toast.error(errorMessage);
       },
     },
   );
@@ -117,22 +195,45 @@ export function DiscountsView({
       return;
     }
 
+    if (!referenceMonth) {
+      toast.error("Selecione o mês de referência");
+      return;
+    }
+
+    const normalizedReferenceMonth =
+      referenceMonth.length === 7 ? `${referenceMonth}-01` : referenceMonth;
+
     const discountData: Discount = {
       seller: selectedEmployeeId,
       discount_type: selectedDiscountTypeId,
+      reference_month: normalizedReferenceMonth,
       notes: notes || undefined,
     };
 
-    // Se requer quantidade (Monster), adiciona quantidade
+    // Se requer quantidade (Monster), adiciona quantidade e resolve o valor
     if (selectedDiscountType?.requires_quantity) {
+      const fixed = selectedDiscountType.fixed_amount
+        ? parseFloat(selectedDiscountType.fixed_amount)
+        : NaN;
+
+      // Backend calcula total_discount com discount_type.fixed_amount; se vier vazio/zero, bloquear
+      if (!Number.isFinite(fixed) || fixed <= 0) {
+        toast.error(
+          "Tipo de desconto sem valor fixo configurado. Defina o valor unitário no cadastro do tipo.",
+        );
+        return;
+      }
+
       const qty = parseInt(quantity);
       if (!qty || qty <= 0) {
         toast.error("Digite uma quantidade válida");
         return;
       }
       discountData.quantity = qty;
+      // Enviar o valor unitário fixo para referência (mesmo que backend use o discount_type)
+      discountData.custom_amount = fixed;
     } else {
-      // Se não requer quantidade (Adiantamento), adiciona custom_amount
+      // Se não requer quantidade (Adiantamento), adiciona custom_amount total
       const amount = parseFloat(customAmount);
       if (!amount || amount <= 0) {
         toast.error("Digite um valor válido");
@@ -140,12 +241,25 @@ export function DiscountsView({
       }
       discountData.custom_amount = amount;
     }
-
     createDiscountMutation(discountData);
   };
 
   const calculateTotal = () => {
     return discounts.reduce((acc, d) => {
+      const value = parseFloat(d.total_discount || "0");
+      return acc + value;
+    }, 0);
+  };
+
+  // Filtrar descontos de consulta por mês
+  const discountosConsultaFiltrados = discountosConsulta.filter((d) => {
+    if (!consultaMes) return true;
+    const discountMonth = d.reference_month?.substring(0, 7);
+    return discountMonth === consultaMes;
+  });
+
+  const calculateConsultaTotal = () => {
+    return discountosConsultaFiltrados.reduce((acc, d) => {
       const value = parseFloat(d.total_discount || "0");
       return acc + value;
     }, 0);
@@ -169,7 +283,7 @@ export function DiscountsView({
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Formulário de Adicionar Desconto */}
+          {/* Coluna Esquerda: Formulário de Adicionar Desconto */}
           <div className="space-y-6">
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
@@ -232,6 +346,35 @@ export function DiscountsView({
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label>Mês de referência</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={refMonth} onValueChange={setRefMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Mês" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthOptions.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min="2020"
+                  max="2099"
+                  value={refYear}
+                  onChange={(e) => setRefYear(e.target.value)}
+                  placeholder="Ano"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Escolha o mês e ano do desconto.
+              </p>
+            </div>
+
             {selectedDiscountType?.requires_quantity ? (
               <div className="space-y-2">
                 <Label>Quantidade</Label>
@@ -249,6 +392,12 @@ export function DiscountsView({
                       parseFloat(selectedDiscountType.fixed_amount) *
                         parseInt(quantity || "0"),
                     )}
+                  </p>
+                )}
+                {!selectedDiscountType.fixed_amount && (
+                  <p className="text-sm text-destructive">
+                    Defina um valor fixo para este tipo no backend para liberar
+                    o cadastro.
                   </p>
                 )}
               </div>
@@ -282,7 +431,10 @@ export function DiscountsView({
             <Button
               onClick={handleAddDiscount}
               disabled={
-                !selectedEmployeeId || !selectedDiscountTypeId || isCreating
+                !selectedEmployeeId ||
+                !selectedDiscountTypeId ||
+                !referenceMonth ||
+                isCreating
               }
               className="w-full"
             >
@@ -291,104 +443,174 @@ export function DiscountsView({
             </Button>
           </div>
 
-          {/* Lista de Descontos */}
+          {/* Coluna Direita: Consulta + Lista de Descontos */}
           <div className="space-y-4">
-            <h4 className="font-medium text-foreground">
-              Descontos do Colaborador
-            </h4>
+            {/* Seção de Consulta */}
+            <div className="space-y-4 border-b pb-6">
+              <h4 className="font-semibold text-foreground">
+                Consultar Descontos
+              </h4>
 
-            {selectedEmployee ? (
-              <>
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">
-                      {selectedEmployee.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {discounts.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Nenhum desconto cadastrado
-                      </p>
-                    ) : (
-                      <>
-                        {discounts.map((discount) => (
-                          <div
-                            key={discount.id}
-                            className="flex items-center justify-between p-3 rounded-lg border border-border"
-                          >
-                            <div className="flex items-center gap-3">
-                              {discount.discount_type &&
-                              "requires_quantity" in discount.discount_type ? (
-                                <Package className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <DollarSign className="h-4 w-4 text-blue-500" />
-                              )}
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {discount.discount_type_name}
-                                </p>
-                                {discount.quantity && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {discount.quantity}x unidades
-                                  </p>
-                                )}
-                                {discount.custom_amount && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Valor:{" "}
-                                    {formatCurrency(
-                                      parseFloat(discount.custom_amount),
-                                    )}
-                                  </p>
-                                )}
-                                {discount.notes && (
-                                  <p className="text-xs text-muted-foreground italic">
-                                    {discount.notes}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Vendedor
+                </Label>
+                <Select
+                  value={consultaVendedorId}
+                  onValueChange={setConsultaVendedorId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um vendedor para consultar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Mês</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select
+                    value={consultaMonth}
+                    onValueChange={setConsultaMonth}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Mês" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {monthOptions.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min="2020"
+                    max="2099"
+                    value={consultaYear}
+                    onChange={(e) => setConsultaYear(e.target.value)}
+                    placeholder="Ano"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Filtra pelos descontos do mês/ano selecionado.
+                </p>
+              </div>
+            </div>
+
+            {/* Lista de Descontos para Consulta */}
+            {consultaVendedorId ? (
+              <div className="space-y-3">
+                <h4 className="font-medium text-foreground">
+                  Descontos -{" "}
+                  {employees.find((e) => e.id === consultaVendedorId)?.name}
+                </h4>
+
+                {discountosConsultaFiltrados.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-8 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Nenhum desconto neste período
+                    </p>
+                    <p className="text-xs text-muted-foreground/60">
+                      Total de descontos do vendedor:{" "}
+                      {discountosConsulta.length}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {discountosConsultaFiltrados.map((discount) => (
+                      <div
+                        key={discount.id}
+                        className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-start gap-3 flex-1">
+                            {discount.discount_type &&
+                            "requires_quantity" in discount.discount_type ? (
+                              <Package className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                            ) : (
+                              <DollarSign className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground">
+                                {discount.discount_type_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {discount.reference_month
+                                  ? new Date(
+                                      discount.reference_month + "-01",
+                                    ).toLocaleDateString("pt-BR", {
+                                      month: "long",
+                                      year: "numeric",
+                                    })
+                                  : "Sem mês"}
+                              </p>
+                              {discount.created_at && (
+                                <p className="text-xs text-muted-foreground/70">
+                                  Criado:{" "}
                                   {new Date(
-                                    discount.created_at || "",
+                                    discount.created_at,
                                   ).toLocaleDateString("pt-BR")}
                                 </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-foreground">
-                                {formatCurrency(
-                                  parseFloat(discount.total_discount || "0"),
-                                )}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() =>
-                                  discount.id &&
-                                  deleteDiscountMutation(discount.id)
-                                }
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              )}
                             </div>
                           </div>
-                        ))}
-
-                        <div className="pt-3 border-t border-border mt-3">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold">
-                              Total de Descontos:
-                            </span>
-                            <span className="text-lg font-bold text-destructive">
-                              {formatCurrency(calculateTotal())}
-                            </span>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-lg font-bold text-foreground">
+                              {discount.total_discount ?? "0"}
+                            </p>
                           </div>
                         </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </>
+
+                        {discount.quantity && (
+                          <p className="text-xs bg-green-50/50 dark:bg-green-950/20 text-green-700 dark:text-green-300 px-2 py-1 rounded w-fit">
+                            {discount.quantity}x unidades
+                          </p>
+                        )}
+
+                        {discount.notes && (
+                          <p className="text-xs text-muted-foreground italic mt-2 border-l-2 border-muted-foreground/30 pl-2">
+                            {discount.notes}
+                          </p>
+                        )}
+
+                        <div className="flex justify-end mt-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() =>
+                              discount.id && deleteDiscountMutation(discount.id)
+                            }
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="pt-3 border-t border-border mt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">
+                          Total de Descontos:
+                        </span>
+                        <span className="text-lg font-bold text-destructive">
+                          {calculateConsultaTotal().toString()}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             ) : (
               <div className="rounded-lg border border-dashed border-border p-8 text-center">
                 <Percent className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
