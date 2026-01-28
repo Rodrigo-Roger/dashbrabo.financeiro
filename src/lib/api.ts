@@ -509,22 +509,30 @@ export async function updateEmployee(
 /**
  * Interface para descontos
  */
+export interface DiscountInstallment {
+  id: string;
+  installment_number: number;
+  amount: number;
+  reference_month: string; // YYYY-MM-DD
+  is_processed: boolean;
+}
+
 export interface Discount {
   id?: string;
-  seller: string; // UUID do vendedor
-  discount_type: string; // UUID do tipo de desconto
-  reference_month?: string; // YYYY-MM ou YYYY-MM-01
-  amount?: number; // Valor do desconto em R$
+  seller: string;
+  discount_type: string; 
+  reference_month: string; 
+  amount: number; 
+  installments_count: number; 
   notes?: string;
-  // Campos de resposta
+  is_active?: boolean;
   seller_name?: string;
   discount_type_name?: string;
   discount_type_code?: string;
-  total_discount?: string;
-  reference_month_display?: string;
-  is_active?: boolean;
+  total_discount?: string; 
   created_at?: string;
   updated_at?: string;
+  installments?: DiscountInstallment[];
 }
 
 /**

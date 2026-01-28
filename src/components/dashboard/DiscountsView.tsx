@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Users, Percent, Plus, DollarSign, Package } from "lucide-react";
-import { formatCurrency, Employee, SAMPLE_EMPLOYEES } from "@/lib/data";
+import { Employee, SAMPLE_EMPLOYEES } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -109,14 +108,15 @@ export function DiscountsView({
   });
 
   // Buscar descontos do funcionário selecionado para consulta
-  const { data: discountosConsulta = [] } = useQuery({
-    queryKey: ["discounts", consultaVendedorId],
-    queryFn: () =>
-      consultaVendedorId
-        ? fetchDiscounts(consultaVendedorId)
-        : Promise.resolve([]),
-    enabled: !!consultaVendedorId,
-  });
+  const { data: discountosConsulta = [], isLoading: isLoadingConsulta } =
+    useQuery({
+      queryKey: ["discounts", "consulta", consultaVendedorId, consultaMes],
+      queryFn: () =>
+        consultaVendedorId
+          ? fetchDiscounts(consultaVendedorId)
+          : Promise.resolve([]),
+      enabled: !!consultaVendedorId,
+    });
 
   const { mutate: createDiscountMutation, isPending: isCreating } = useMutation(
     {
@@ -186,6 +186,7 @@ export function DiscountsView({
       reference_month: normalizedReferenceMonth,
       amount: amountValue,
       notes: notes || undefined,
+      installments_count: parseInt(installmentsCount) || 1,
     };
 
     createDiscountMutation(discountData);
@@ -205,9 +206,21 @@ export function DiscountsView({
     return discountMonth === consultaMes;
   });
 
+  const [installmentsCount, setInstallmentsCount] = useState<string>("1");
+
+  const installmentOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({
+        value: (i + 1).toString(),
+        label: `${i + 1}x`,
+      })),
+    [],
+  );
+
   const calculateConsultaTotal = () => {
     return discountosConsultaFiltrados.reduce((acc, d) => {
-      const value = parseFloat(d.total_discount || "0");
+      const value =
+        typeof d.amount === "number" ? d.amount : parseFloat(d.amount || "0");
       return acc + value;
     }, 0);
   };
@@ -321,29 +334,44 @@ export function DiscountsView({
             </div>
 
             {selectedDiscountTypeId && (
-              <div className="space-y-2">
-                <Label>Valor do Desconto</Label>
-                <Input
-                  type="tel"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  step="0.01"
-                  min="0"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Valor Total</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Parcelar em</Label>
+                  <Select
+                    value={installmentsCount}
+                    onValueChange={setInstallmentsCount}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="1x" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {installmentOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
 
-            {selectedDiscountTypeId && (
-              <div className="space-y-2">
-                <Label>Observações (opcional)</Label>
-                <Input
-                  type="text"
-                  placeholder="Adicione uma observação..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
+            {/* Pequeno feedback visual do valor por parcela */}
+            {parseFloat(amount) > 0 && parseInt(installmentsCount) > 1 && (
+              <p className="text-xs text-blue-500 font-medium">
+                Serão geradas {installmentsCount} parcelas de R${" "}
+                {(parseFloat(amount) / parseInt(installmentsCount)).toFixed(2)}
+              </p>
             )}
 
             <Button
@@ -473,6 +501,14 @@ export function DiscountsView({
                           <div className="text-right flex-shrink-0">
                             <p className="text-lg font-bold text-foreground">
                               {discount.total_discount ?? "0"}
+                            </p>
+                            <p className="text-xs text-muted-foreground/70">
+                              {discount.installments_count > 1 && (
+                                <span className=" text-white text-[10px] 
+                                px-1.5 py-0.5 rounded-full font-bold">
+                                  {discount.installments_count}x
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
