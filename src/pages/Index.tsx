@@ -374,7 +374,7 @@ export default function Index() {
                   <KPICard
                     title="Descontos"
                     value={formatCurrency(compensation.discounts)}
-                    subtitle="Remuneração mensal"
+                    subtitle="Desconto mensal"
                     icon={DollarSign}
                     variant="primary"
                     trend={{ value: 12.5, label: "vs. mês anterior" }}
