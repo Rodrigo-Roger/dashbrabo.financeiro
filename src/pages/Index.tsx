@@ -31,13 +31,7 @@ import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { RolesGoalsView } from "@/components/dashboard/RolesGoalsView";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
 import { ImplantedTotals } from "@/components/dashboard/ImplantedTotals";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   Popover,
   PopoverContent,
@@ -372,6 +366,14 @@ export default function Index() {
                   <KPICard
                     title="Total"
                     value={formatCurrency(compensation.total)}
+                    subtitle="Remuneração mensal"
+                    icon={DollarSign}
+                    variant="primary"
+                    trend={{ value: 12.5, label: "vs. mês anterior" }}
+                  />
+                  <KPICard
+                    title="Descontos"
+                    value={formatCurrency(compensation.discounts)}
                     subtitle="Remuneração mensal"
                     icon={DollarSign}
                     variant="primary"

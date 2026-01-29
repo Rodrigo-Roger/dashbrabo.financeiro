@@ -19,7 +19,6 @@ import {
   fetchDiscounts,
   fetchDiscountTypes,
   type Discount,
-  type DiscountType,
 } from "@/lib/api";
 
 interface DiscountsViewProps {
@@ -34,7 +33,6 @@ interface DiscountsViewProps {
 export function DiscountsView({
   employees = SAMPLE_EMPLOYEES,
   className,
-  dateFilter,
 }: DiscountsViewProps) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedDiscountTypeId, setSelectedDiscountTypeId] =
@@ -108,7 +106,7 @@ export function DiscountsView({
   });
 
   // Buscar descontos do funcionário selecionado para consulta
-  const { data: discountosConsulta = [], isLoading: isLoadingConsulta } =
+  const { data: descontosConsulta = [], isLoading: isLoadingConsulta } =
     useQuery({
       queryKey: ["discounts", "consulta", consultaVendedorId, consultaMes],
       queryFn: () =>
@@ -200,7 +198,7 @@ export function DiscountsView({
   };
 
   // Filtrar descontos de consulta por mês
-  const discountosConsultaFiltrados = discountosConsulta.filter((d) => {
+  const discountosConsultaFiltrados = descontosConsulta.filter((d) => {
     if (!consultaMes) return true;
     const discountMonth = d.reference_month?.substring(0, 7);
     return discountMonth === consultaMes;
@@ -467,7 +465,7 @@ export function DiscountsView({
                     </p>
                     <p className="text-xs text-muted-foreground/60">
                       Total de descontos do vendedor:{" "}
-                      {discountosConsulta.length}
+                      {descontosConsulta.length}
                     </p>
                   </div>
                 ) : (
