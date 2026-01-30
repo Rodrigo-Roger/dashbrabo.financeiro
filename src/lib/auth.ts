@@ -13,25 +13,48 @@ export interface AuthUser {
   username: string;
 }
 
-// Headers padrão para todas as requisições à API externa
-export const getAuthHeaders = (): HeadersInit => {
-  const tokens = getTokens();
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
+// --- Gerenciamento de Tokens ---
 
-  // ⭐ Usar APENAS Bearer token, sem X-API-Key
-  if (tokens?.access) {
-    headers["Authorization"] = `Bearer ${tokens.access}`;
-  }
-
-  return headers;
+export const getTokens = (): AuthTokens | null => {
+  const tokens = localStorage.getItem("auth_tokens");
+  return tokens ? JSON.parse(tokens) : null;
 };
 
-// Login via API
+export const getAccessToken = (): string | null => {
+  const tokens = getTokens();
+  return tokens?.access || null;
+};
+
+export const getRefreshToken = (): string | null => {
+  const tokens = getTokens();
+  return tokens?.refresh || null;
+};
+
+export const saveTokens = (tokens: AuthTokens): void => {
+  localStorage.setItem("auth_tokens", JSON.stringify(tokens));
+};
+
+export const saveUser = (user: AuthUser): void => {
+  localStorage.setItem("auth_user", JSON.stringify(user));
+};
+
+export const getUser = (): AuthUser | null => {
+  const user = localStorage.getItem("auth_user");
+  return user ? JSON.parse(user) : null;
+};
+
+export const logout = (): void => {
+  localStorage.removeItem("auth_tokens");
+  localStorage.removeItem("auth_user");
+};
+
+export const isAuthenticated = (): boolean => {
+  return !!getAccessToken();
+};
+
 export const login = async (
   username: string,
-  password: string
+  password: string,
 ): Promise<AuthTokens> => {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/v1/token/`, {
@@ -46,64 +69,28 @@ export const login = async (
     const data = await response.json();
 
     if (response.ok && data?.access) {
-      const tokens: AuthTokens = data;
+      // Garante que salvamos access e refresh
+      const tokens: AuthTokens = {
+        access: data.access,
+        refresh: data.refresh || data.access,
+      };
       saveTokens(tokens);
       saveUser({ username });
       return tokens;
     } else {
       throw new Error(data.detail || "Credenciais inválidas");
     }
-  } catch (err) {
-    throw new Error("Erro na autenticação. Verifique suas credenciais.");
+  } catch (err: any) {
+    throw new Error(
+      err.message || "Erro na autenticação. Verifique suas credenciais.",
+    );
   }
 };
 
-// Logout
-export const logout = (): void => {
-  localStorage.removeItem("auth_tokens");
-  localStorage.removeItem("auth_user");
-};
-
-// Salvar tokens
-export const saveTokens = (tokens: AuthTokens): void => {
-  localStorage.setItem("auth_tokens", JSON.stringify(tokens));
-};
-
-// Obter tokens
-export const getTokens = (): AuthTokens | null => {
-  const tokens = localStorage.getItem("auth_tokens");
-  return tokens ? JSON.parse(tokens) : null;
-};
-
-// Salvar usuário
-export const saveUser = (user: AuthUser): void => {
-  localStorage.setItem("auth_user", JSON.stringify(user));
-};
-
-// Obter usuário
-export const getUser = (): AuthUser | null => {
-  const user = localStorage.getItem("auth_user");
-  return user ? JSON.parse(user) : null;
-};
-
-// Verificar se está autenticado
-export const isAuthenticated = (): boolean => {
-  const tokens = getTokens();
-  return !!tokens?.access;
-};
-
-// Fazer requisição autenticada
-export const authFetch = async (
-  url: string,
-  options: RequestInit = {}
-): Promise<Response> => {
-  const headers = {
-    ...getAuthHeaders(),
-    ...options.headers,
+export const getAuthHeaders = (): HeadersInit => {
+  const token = getAccessToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-
-  return fetch(url, {
-    ...options,
-    headers,
-  });
 };
