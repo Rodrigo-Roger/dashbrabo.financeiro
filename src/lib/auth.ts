@@ -80,9 +80,11 @@ export const login = async (
     } else {
       throw new Error(data.detail || "Credenciais inválidas");
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err as Record<string, unknown>;
+    const message = error?.message as string | undefined;
     throw new Error(
-      err.message || "Erro na autenticação. Verifique suas credenciais.",
+      message || "Erro na autenticação. Verifique suas credenciais.",
     );
   }
 };

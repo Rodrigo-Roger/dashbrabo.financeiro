@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Bell, Settings, Menu, User, LogOut } from "lucide-react";
+import { Menu, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -51,13 +51,6 @@ export function Header({ onMenuClick, userEmail, className }: HeaderProps) {
       </div>
       
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" className="relative h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-destructive" />
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
-          <Settings className="h-4 w-4" />
-        </Button>
         <Separator orientation="vertical" className="h-5 mx-2" />
         
         <DropdownMenu>

@@ -134,16 +134,24 @@ export async function fetchEmployees(filters?: {
       },
     });
     return mapApiEmployeesToLocal(response.data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Fallback: Se falhar o dashboard, tenta endpoint /users/
-    if (error.response) {
+    const apiError = error as Record<string, unknown>;
+    if (apiError?.response) {
       try {
         const fallbackResponse = await api.get("/moskit/v1/users/");
         return mapApiEmployeesToLocal(fallbackResponse.data);
-      } catch (fallbackError: any) {
+      } catch (fallbackError: unknown) {
+        const fallbackApiError = fallbackError as Record<string, unknown>;
+        const fallbackResponse = fallbackApiError?.response as Record<
+          string,
+          unknown
+        >;
+        const fallbackData = fallbackResponse?.data as Record<string, unknown>;
+        const detail = fallbackData?.detail as string | undefined;
         throw new Error(
-          fallbackError?.response?.data?.detail ||
-            `Erro ao buscar vendedores: ${fallbackError?.response?.status || "Unknown"}`,
+          detail ||
+            `Erro ao buscar vendedores: ${fallbackResponse?.status || "Unknown"}`,
         );
       }
     }
