@@ -27,10 +27,12 @@ export function Header({ onMenuClick, username, className }: HeaderProps) {
   };
 
   return (
-    <header className={cn(
-      "sticky top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-card px-5",
-      className
-    )}>
+    <header
+      className={cn(
+        "sticky top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-card px-5",
+        className,
+      )}
+    >
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -40,22 +42,22 @@ export function Header({ onMenuClick, username, className }: HeaderProps) {
         >
           <Menu className="h-4 w-4" />
         </Button>
-        
+
         <div className="flex items-center gap-3">
-          <img 
-            src={logoMontseguro} 
-            alt="Montseguro" 
-            className="h-8 w-auto"
-          />
+          <img src={logoMontseguro} alt="Montseguro" className="h-8 w-auto" />
         </div>
       </div>
-      
+
       <div className="flex items-center gap-1">
         <Separator orientation="vertical" className="h-5 mx-2" />
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 text-muted-foreground hover:text-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-2 px-2 text-muted-foreground hover:text-foreground"
+            >
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary">
                 <User className="h-3 w-3" />
               </div>
@@ -65,7 +67,10 @@ export function Header({ onMenuClick, username, className }: HeaderProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-destructive focus:text-destructive"
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Sair
             </DropdownMenuItem>
