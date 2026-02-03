@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Users, Percent, Plus, DollarSign, Package } from "lucide-react";
-import { Employee, SAMPLE_EMPLOYEES } from "@/lib/data";
+import { Employee } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +31,7 @@ interface DiscountsViewProps {
 }
 
 export function DiscountsView({
-  employees = SAMPLE_EMPLOYEES,
+  employees = [],
   className,
 }: DiscountsViewProps) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
@@ -464,8 +464,7 @@ export function DiscountsView({
                       Nenhum desconto neste período
                     </p>
                     <p className="text-xs text-muted-foreground/60">
-                      Total de descontos do vendedor:{" "}
-                      {descontosConsulta.length}
+                      Total de descontos do vendedor: {descontosConsulta.length}
                     </p>
                   </div>
                 ) : (
@@ -502,8 +501,10 @@ export function DiscountsView({
                             </p>
                             <p className="text-xs text-muted-foreground/70">
                               {discount.installments_count > 1 && (
-                                <span className=" text-white text-[10px] 
-                                px-1.5 py-0.5 rounded-full font-bold">
+                                <span
+                                  className=" text-white text-[10px] 
+                                px-1.5 py-0.5 rounded-full font-bold"
+                                >
                                   {discount.installments_count}x
                                 </span>
                               )}

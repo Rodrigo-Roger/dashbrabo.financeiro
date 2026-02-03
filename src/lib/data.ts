@@ -349,60 +349,6 @@ export function calculateCompensation(
   };
 }
 
-// Sample employees for demonstration
-export const SAMPLE_EMPLOYEES: Employee[] = [
-  {
-    id: "1",
-    name: "Ana Silva",
-    role: "level5",
-    path: "specialist",
-    currentDemand: 25000,
-    quarterlyRevenue: 72000,
-    tenure: 3,
-  },
-  {
-    id: "2",
-    name: "Carlos Mendes",
-    role: "tech_leader_1",
-    path: "leadership",
-    currentDemand: 18000,
-    quarterlyRevenue: 55000,
-    tenure: 2,
-    teamSize: 5,
-    promotedMembers: 2,
-  },
-  {
-    id: "3",
-    name: "Juliana Costa",
-    role: "contract_manager",
-    path: "leadership",
-    currentDemand: 150000,
-    quarterlyRevenue: 420000,
-    tenure: 4,
-    teamSize: 12,
-  },
-  {
-    id: "4",
-    name: "Ricardo Santos",
-    role: "level3",
-    path: "specialist",
-    currentDemand: 12000,
-    quarterlyRevenue: 38000,
-    tenure: 1,
-  },
-  {
-    id: "5",
-    name: "Mariana Oliveira",
-    role: "unit_manager",
-    path: "leadership",
-    currentDemand: 0,
-    quarterlyRevenue: 850000,
-    tenure: 5,
-    teamSize: 25,
-    unitRevenue: 380000,
-  },
-];
-
 // Format currency
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", {

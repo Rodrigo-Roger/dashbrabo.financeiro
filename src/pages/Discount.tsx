@@ -1,4 +1,4 @@
-import { DiscountsView } from "@/components/dashboard/DiscountsView";
+import { DiscountsView } from "@/components/dashboard/discounts";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { ConditionalRender } from "@/utils/state-components";
 import { useFetchEmployees } from "@/hooks/useFetchEmployees";

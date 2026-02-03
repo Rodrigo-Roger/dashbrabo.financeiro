@@ -8,7 +8,7 @@ import {
   ROLES,
   type RoleMap,
 } from "@/lib/data";
-import { StatusBadge } from "./StatusBadge";
+import { StatusBadge } from "../cards/StatusBadge";
 
 interface TeamOverviewProps {
   employees: Employee[];
@@ -23,11 +23,11 @@ export function TeamOverview({
 }: TeamOverviewProps) {
   const totalRevenue = employees.reduce(
     (sum, emp) => sum + emp.quarterlyRevenue,
-    0
+    0,
   );
   const totalPayout = employees.reduce(
     (sum, emp) => sum + calculateCompensation(emp, rolesMap).total,
-    0
+    0,
   );
   const avgPerformance =
     employees.reduce((sum, emp) => {
@@ -129,7 +129,7 @@ export function TeamOverview({
                 const status = getPerformanceStatus(
                   employee.quarterlyRevenue,
                   role.quarterlyStay,
-                  role.quarterlyPromotion
+                  role.quarterlyPromotion,
                 );
 
                 return (

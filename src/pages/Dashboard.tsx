@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
+import { FinancialSummary } from "@/components/dashboard/compensation";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { ConditionalRender } from "@/utils/state-components";
 import { useFetchEmployees } from "@/hooks/useFetchEmployees";

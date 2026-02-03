@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/data";
 import { fetchDiscounts } from "@/lib/api";
 import { getDiscountTotal } from "@/lib/discounts";
-import { KPICard } from "./KPICard";
+import { KPICard } from "../cards/KPICard";
 import { Minus, DollarSign } from "lucide-react";
 
 interface DiscountSummaryProps {

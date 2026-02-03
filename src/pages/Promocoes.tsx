@@ -1,5 +1,5 @@
 import { DashboardLayout } from "@/layouts/DashboardLayout";
-import { TeamOverview } from "@/components/dashboard/TeamOverview";
+import { TeamOverview } from "@/components/dashboard/views";
 import { ConditionalRender, EmptyState } from "@/utils/state-components";
 import { useFetchEmployees } from "@/hooks/useFetchEmployees";
 

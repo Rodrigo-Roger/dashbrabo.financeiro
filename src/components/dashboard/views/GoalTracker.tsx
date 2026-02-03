@@ -7,8 +7,8 @@ import {
   getPerformanceStatus,
   type RoleMap,
 } from "@/lib/data";
-import { ProgressBar } from "./ProgressBar";
-import { StatusBadge } from "./StatusBadge";
+import { ProgressBar } from "../cards/ProgressBar";
+import { StatusBadge } from "../cards/StatusBadge";
 
 interface GoalTrackerProps {
   level: CareerLevel;
@@ -27,7 +27,7 @@ export function GoalTracker({
   const status = getPerformanceStatus(
     quarterlyRevenue,
     role.quarterlyStay,
-    role.quarterlyPromotion
+    role.quarterlyPromotion,
   );
 
   const hasGoals = role.quarterlyStay || role.quarterlyPromotion;

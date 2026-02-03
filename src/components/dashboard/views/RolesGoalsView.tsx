@@ -7,7 +7,6 @@ import {
   Employee,
   ROLES,
   type RoleMap,
-  SAMPLE_EMPLOYEES,
 } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -29,7 +28,7 @@ interface RolesGoalsViewProps {
 }
 
 export function RolesGoalsView({
-  employees = SAMPLE_EMPLOYEES,
+  employees = [],
   rolesMap = ROLES,
   className,
 }: RolesGoalsViewProps) {
@@ -66,8 +65,8 @@ export function RolesGoalsView({
               data.map((emp) =>
                 emp.id === id
                   ? { ...emp, role, path: rolesMap[role]?.path ?? emp.path }
-                  : emp
-              )
+                  : emp,
+              ),
             );
           }
         });
@@ -92,7 +91,7 @@ export function RolesGoalsView({
       toast.error(
         error instanceof Error
           ? error.message
-          : "Não foi possível atualizar o cargo"
+          : "Não foi possível atualizar o cargo",
       );
     },
   });

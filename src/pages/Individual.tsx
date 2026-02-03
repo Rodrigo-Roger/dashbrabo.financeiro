@@ -1,15 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
-import { EmployeeSelector } from "@/components/dashboard/EmployeeSelector";
-import { KPICard } from "@/components/dashboard/KPICard";
-import { CompensationBreakdown } from "@/components/dashboard/CompensationBreakdown";
-import { RevenueChart } from "@/components/dashboard/RevenueChart";
-import { DiscountSummary } from "@/components/dashboard/DiscountSummary";
-import { DiscountInstallments } from "@/components/dashboard/DiscountInstallments";
+import { EmployeeSelector } from "@/components/dashboard/selectors";
+import { KPICard } from "@/components/dashboard/cards";
+import { CompensationBreakdown } from "@/components/dashboard/compensation";
+import { RevenueChart } from "@/components/dashboard/charts";
+import {
+  DiscountSummary,
+  DiscountInstallments,
+} from "@/components/dashboard/discounts";
 import { ConditionalRender } from "@/utils/state-components";
 import { useFetchEmployees } from "@/hooks/useFetchEmployees";
 import { calculateCompensation, formatCurrency } from "@/lib/data";
-import { fetchPaymentHistory } from "@/lib/api";
 import {
   Popover,
   PopoverContent,
@@ -29,6 +30,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
+import { fetchPaymentHistory } from "@/services/dashboard/paymentService";
 
 export default function Individual() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(

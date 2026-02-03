@@ -6,9 +6,8 @@ import { isAuthenticated, getUser } from "@/lib/auth";
 import { useEmployees, useRoles } from "@/hooks/useEmployeeApi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Header } from "@/components/dashboard/Header";
-import { Sidebar } from "@/components/dashboard/Sidebar";
-import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
+import { Header, Sidebar } from "@/components/dashboard/layout";
+import { FinancialSummary } from "@/components/dashboard/compensation";
 
 import {
   Popover,

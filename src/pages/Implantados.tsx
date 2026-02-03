@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
-import { ImplantedTotals } from "@/components/dashboard/ImplantedTotals";
+import { ImplantedTotals } from "@/components/dashboard/views";
 import { ConditionalRender } from "@/utils/state-components";
 import { useFetchEmployees } from "@/hooks/useFetchEmployees";
 import {

@@ -1,5 +1,5 @@
 import { DashboardLayout } from "@/layouts/DashboardLayout";
-import { RolesGoalsView } from "@/components/dashboard/RolesGoalsView";
+import { RolesGoalsView } from "@/components/dashboard/views";
 import { ConditionalRender } from "@/utils/state-components";
 import { useFetchEmployees } from "@/hooks/useFetchEmployees";
 
