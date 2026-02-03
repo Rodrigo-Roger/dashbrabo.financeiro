@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { fetchDiscounts, type Discount } from "@/lib/api";
 import { DollarSign, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/data";
+import { getDiscountInstallments, getDiscountTotal } from "@/lib/discounts";
 
 interface DiscountInstallmentsProps {
   employeeId?: string;
@@ -41,65 +42,8 @@ export function DiscountInstallments({
   }, [employeeId, dateFilter]);
 
   // Calcular qual parcela de cada desconto cai no período selecionado
-  const getInstallmentsToDisplay = (discount: Discount) => {
-    // Se não há filtro de período, não mostrar nada
-    if (!discount.created_at) {
-      return [];
-    }
-
-    const installmentsCount = discount.installments_count || 1;
-    const totalAmount = Number(discount.total_discount || 0);
-    const installmentValue = totalAmount / installmentsCount;
-
-    const createdDate = new Date(discount.created_at);
-    const filterStart = dateFilter?.startDate
-      ? new Date(dateFilter.startDate)
-      : null;
-    const filterEnd = dateFilter?.endDate ? new Date(dateFilter.endDate) : null;
-
-    const installments = [];
-    for (let i = 0; i < installmentsCount; i++) {
-      const installmentDate = new Date(createdDate);
-      installmentDate.setMonth(installmentDate.getMonth() + i);
-
-      // Se não há filtro, mostrar todas as parcelas
-      if (!filterStart || !filterEnd) {
-        installments.push({
-          currentInstallment: i + 1,
-          totalInstallments: installmentsCount,
-          value: installmentValue,
-          totalValue: totalAmount,
-        });
-      } else {
-        // Verificar se o mês da parcela está dentro do período selecionado
-        const installmentMonth = new Date(
-          installmentDate.getFullYear(),
-          installmentDate.getMonth(),
-          1,
-        );
-        const installmentMonthEnd = new Date(
-          installmentDate.getFullYear(),
-          installmentDate.getMonth() + 1,
-          0,
-        );
-
-        // Verificar se há sobreposição entre o período do filtro e o mês da parcela
-        if (
-          installmentMonth <= filterEnd &&
-          installmentMonthEnd >= filterStart
-        ) {
-          installments.push({
-            currentInstallment: i + 1,
-            totalInstallments: installmentsCount,
-            value: installmentValue,
-            totalValue: totalAmount,
-          });
-        }
-      }
-    }
-
-    return installments;
-  };
+  const getInstallmentsToDisplay = (discount: Discount) =>
+    getDiscountInstallments(discount, dateFilter);
 
   if (!employeeId) {
     return null;
@@ -126,7 +70,7 @@ export function DiscountInstallments({
         <DollarSign className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
         <p className="text-muted-foreground">
           {!dateFilter?.startDate || !dateFilter?.endDate
-            ? "Selecione um período para ver as parcelas"
+            ? "Nenhum desconto encontrado"
             : "Nenhuma parcela encontrada no período selecionado"}
         </p>
       </div>
@@ -215,12 +159,7 @@ export function DiscountInstallments({
                 : "Total geral:"}
             </span>
             <span className="text-lg font-bold text-destructive">
-              {formatCurrency(
-                discounts
-                  .flatMap((discount) => getInstallmentsToDisplay(discount))
-                  .filter((inst) => inst.value > 0)
-                  .reduce((sum, inst) => sum + inst.value, 0),
-              )}
+              {formatCurrency(getDiscountTotal(discounts, dateFilter))}
             </span>
           </div>
         </div>

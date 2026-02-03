@@ -1,5 +1,6 @@
 import api from "./api_config";
 import type { CareerLevel, CareerPath, Employee } from "./data";
+import { getDiscountTotal } from "./discounts";
 
 type ApiUnknown = Record<string, unknown>;
 
@@ -514,41 +515,9 @@ export async function fetchPaymentHistory(
           let monthDiscounts = 0;
           try {
             const discounts = await fetchDiscounts(employeeId);
-            const filterStart = startDate;
-            const filterEnd = endDate;
-
-            discounts.forEach((discount) => {
-              if (!discount.created_at) return;
-
-              const createdDate = new Date(discount.created_at);
-              const installmentsCount = discount.installments_count || 1;
-              const totalAmount = Number(discount.total_discount || 0);
-              const installmentValue = totalAmount / installmentsCount;
-
-              // Calcular quais parcelas caem neste mês
-              for (let j = 0; j < installmentsCount; j++) {
-                const installmentDate = new Date(createdDate);
-                installmentDate.setMonth(installmentDate.getMonth() + j);
-
-                const installmentMonth = new Date(
-                  installmentDate.getFullYear(),
-                  installmentDate.getMonth(),
-                  1,
-                );
-                const installmentMonthEnd = new Date(
-                  installmentDate.getFullYear(),
-                  installmentDate.getMonth() + 1,
-                  0,
-                );
-
-                // Verificar se há sobreposição entre o mês e a parcela
-                if (
-                  installmentMonth <= filterEnd &&
-                  installmentMonthEnd >= filterStart
-                ) {
-                  monthDiscounts += installmentValue;
-                }
-              }
+            monthDiscounts = getDiscountTotal(discounts, {
+              startDate,
+              endDate,
             });
           } catch {
             // Se falhar ao buscar descontos, continua sem descontos
