@@ -229,14 +229,8 @@ export default function Individual() {
                   />
                   <DiscountSummary
                     employeeId={selectedEmployeeId || undefined}
+                    compensation={compensation}
                     dateFilter={appliedFilters}
-                  />
-                  <KPICard
-                    title="Total"
-                    value={formatCurrency(compensation.total)}
-                    subtitle="Remuneração mensal"
-                    icon={DollarSign}
-                    variant="primary"
                   />
                 </div>
 

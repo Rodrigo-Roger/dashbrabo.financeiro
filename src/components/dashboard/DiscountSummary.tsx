@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/data";
 import { getTotalDiscounts, fetchDiscounts } from "@/lib/api";
 import { KPICard } from "./KPICard";
-import { Minus } from "lucide-react";
+import { Minus, DollarSign } from "lucide-react";
 
 interface DiscountSummaryProps {
   employeeId?: string;
+  compensation?: {
+    total: number;
+  };
   dateFilter?: {
     startDate?: string;
     endDate?: string;
@@ -14,6 +17,7 @@ interface DiscountSummaryProps {
 
 export function DiscountSummary({
   employeeId,
+  compensation,
   dateFilter,
 }: DiscountSummaryProps) {
   const [totalDiscount, setTotalDiscount] = useState(0);
@@ -28,21 +32,50 @@ export function DiscountSummary({
 
       setLoading(true);
       try {
-        // Se houver filtro de período, busca todos os descontos e filtra
+        const discounts = await fetchDiscounts(employeeId);
+
+        // Se houver filtro de período, calcular apenas as parcelas do período
         if (dateFilter?.startDate && dateFilter?.endDate) {
-          const discounts = await fetchDiscounts(employeeId);
-          const startDate = new Date(dateFilter.startDate);
-          const endDate = new Date(dateFilter.endDate);
+          const filterStart = new Date(dateFilter.startDate);
+          const filterEnd = new Date(dateFilter.endDate);
 
-          const filteredTotal = discounts.reduce((sum, discount) => {
-            const discountDate = new Date(discount.created_at);
-            if (discountDate >= startDate && discountDate <= endDate) {
-              return sum + Number(discount.total_discount || 0);
+          let periodTotal = 0;
+
+          discounts.forEach((discount) => {
+            if (!discount.created_at) return;
+
+            const createdDate = new Date(discount.created_at);
+            const installmentsCount = discount.installments_count || 1;
+            const totalAmount = Number(discount.total_discount || 0);
+            const installmentValue = totalAmount / installmentsCount;
+
+            // Calcular quais parcelas caem no período
+            for (let i = 0; i < installmentsCount; i++) {
+              const installmentDate = new Date(createdDate);
+              installmentDate.setMonth(installmentDate.getMonth() + i);
+
+              const installmentMonth = new Date(
+                installmentDate.getFullYear(),
+                installmentDate.getMonth(),
+                1,
+              );
+              const installmentMonthEnd = new Date(
+                installmentDate.getFullYear(),
+                installmentDate.getMonth() + 1,
+                0,
+              );
+
+              // Verificar se há sobreposição entre o período do filtro e o mês da parcela
+              if (
+                installmentMonth <= filterEnd &&
+                installmentMonthEnd >= filterStart
+              ) {
+                periodTotal += installmentValue;
+              }
             }
-            return sum;
-          }, 0);
+          });
 
-          setTotalDiscount(filteredTotal);
+          setTotalDiscount(periodTotal);
         } else {
           // Sem filtro, pega o total de todos os descontos
           const total = await getTotalDiscounts(employeeId);
@@ -59,15 +92,26 @@ export function DiscountSummary({
     fetchDiscountData();
   }, [employeeId, dateFilter]);
 
+  const netTotal = (compensation?.total || 0) - totalDiscount;
+
   return (
-    <KPICard
-      title="Desconto"
-      value={loading ? "Carregando..." : formatCurrency(totalDiscount)}
-      subtitle={
-        dateFilter?.startDate && dateFilter?.endDate ? "Do período" : "Total"
-      }
-      icon={Minus}
-      variant="danger"
-    />
+    <>
+      <KPICard
+        title="Desconto"
+        value={loading ? "Carregando..." : formatCurrency(totalDiscount)}
+        subtitle={
+          dateFilter?.startDate && dateFilter?.endDate ? "Do período" : "Total"
+        }
+        icon={Minus}
+        variant="danger"
+      />
+      <KPICard
+        title="Total Líquido"
+        value={formatCurrency(netTotal)}
+        subtitle="Após descontos"
+        icon={DollarSign}
+        variant="primary"
+      />
+    </>
   );
 }
