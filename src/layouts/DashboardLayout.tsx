@@ -3,12 +3,12 @@ import { Header, Sidebar } from "@/components/dashboard/layout";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  userEmail?: string | null;
+  username?: string | null;
 }
 
 export function DashboardLayout({
   children,
-  userEmail = null,
+  username = null,
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -19,7 +19,7 @@ export function DashboardLayout({
       <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
         <Header
           onMenuClick={() => setSidebarOpen(true)}
-          userEmail={userEmail}
+          username={username}
         />
 
         <main className="flex-1 overflow-auto p-4 md:p-5 lg:p-6">

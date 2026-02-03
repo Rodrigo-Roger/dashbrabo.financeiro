@@ -14,11 +14,11 @@ import logoMontseguro from "@/assets/logo-montseguro.png";
 
 interface HeaderProps {
   onMenuClick?: () => void;
-  userEmail?: string | null;
+  username?: string | null;
   className?: string;
 }
 
-export function Header({ onMenuClick, userEmail, className }: HeaderProps) {
+export function Header({ onMenuClick, username, className }: HeaderProps) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -59,8 +59,8 @@ export function Header({ onMenuClick, userEmail, className }: HeaderProps) {
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary">
                 <User className="h-3 w-3" />
               </div>
-              <span className="hidden text-sm md:inline max-w-[120px] truncate">
-                {userEmail || "Usuário"}
+              <span className="hidden text-sm md:inline">
+                {username || "Usuário"}
               </span>
             </Button>
           </DropdownMenuTrigger>
