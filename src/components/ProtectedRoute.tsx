@@ -10,7 +10,6 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({
   children,
-  requiredRole,
 }: ProtectedRouteProps) => {
   const location = useLocation();
   const token = getAccessToken();

@@ -42,7 +42,7 @@ export interface Employee {
   path: CareerPath;
   currentDemand: number;
   quarterlyRevenue: number;
-  tenure: number; // in years
+  tenure: number;
   teamSize?: number;
   promotedMembers?: number;
   unitRevenue?: number;
@@ -66,7 +66,6 @@ export interface Benefit {
 
 export type RoleMap = Record<CareerLevel, RoleConfig>;
 
-// Role configurations based on business rules
 export const ROLES: RoleMap = {
   level1: {
     id: "level1",

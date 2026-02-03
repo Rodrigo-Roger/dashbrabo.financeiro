@@ -9,8 +9,7 @@ import { ROLES, type Employee, type RoleMap, type RoleConfig } from "@/lib/data"
 
 /**
  * Hook para buscar lista de todos os funcionários
- * ⭐ IMPORTANTE: Backend filtra automaticamente por M2M
- * Só busca se estiver autenticado (tem token)
+ * Só busca se estiver alutenticado (tem token)
  */
 export function useEmployees(filters?: {
   startDate?: string;

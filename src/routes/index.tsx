@@ -1,7 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { ROUTES } from "@/config/routes.config";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
