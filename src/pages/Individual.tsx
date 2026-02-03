@@ -4,6 +4,8 @@ import { EmployeeSelector } from "@/components/dashboard/EmployeeSelector";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { CompensationBreakdown } from "@/components/dashboard/CompensationBreakdown";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
+import { DiscountSummary } from "@/components/dashboard/DiscountSummary";
+import { DiscountInstallments } from "@/components/dashboard/DiscountInstallments";
 import { ConditionalRender } from "@/utils/state-components";
 import { useFetchEmployees } from "@/hooks/useFetchEmployees";
 import { calculateCompensation, formatCurrency } from "@/lib/data";
@@ -200,7 +202,7 @@ export default function Individual() {
 
             {compensation && (
               <>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   <KPICard
                     title="Salário Base"
                     value={formatCurrency(compensation.baseSalary)}
@@ -225,6 +227,10 @@ export default function Individual() {
                     icon={Award}
                     variant="warning"
                   />
+                  <DiscountSummary
+                    employeeId={selectedEmployeeId || undefined}
+                    dateFilter={appliedFilters}
+                  />
                   <KPICard
                     title="Total"
                     value={formatCurrency(compensation.total)}
@@ -237,6 +243,13 @@ export default function Individual() {
                 <div className="grid gap-5 lg:grid-cols-2">
                   <CompensationBreakdown compensation={compensation} />
                   <RevenueChart data={sampleRevenueData} />
+                </div>
+
+                <div>
+                  <DiscountInstallments
+                    employeeId={selectedEmployeeId || undefined}
+                    dateFilter={appliedFilters}
+                  />
                 </div>
               </>
             )}
