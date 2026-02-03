@@ -34,26 +34,32 @@ export function DiscountSummary({
       try {
         const discounts = await fetchDiscounts(employeeId);
 
-        // Se houver filtro de período, calcular apenas as parcelas do período
-        if (dateFilter?.startDate && dateFilter?.endDate) {
-          const filterStart = new Date(dateFilter.startDate);
-          const filterEnd = new Date(dateFilter.endDate);
+        const filterStart = dateFilter?.startDate
+          ? new Date(dateFilter.startDate)
+          : null;
+        const filterEnd = dateFilter?.endDate
+          ? new Date(dateFilter.endDate)
+          : null;
 
-          let periodTotal = 0;
+        let periodTotal = 0;
 
-          discounts.forEach((discount) => {
-            if (!discount.created_at) return;
+        discounts.forEach((discount) => {
+          if (!discount.created_at) return;
 
-            const createdDate = new Date(discount.created_at);
-            const installmentsCount = discount.installments_count || 1;
-            const totalAmount = Number(discount.total_discount || 0);
-            const installmentValue = totalAmount / installmentsCount;
+          const createdDate = new Date(discount.created_at);
+          const installmentsCount = discount.installments_count || 1;
+          const totalAmount = Number(discount.total_discount || 0);
+          const installmentValue = totalAmount / installmentsCount;
 
-            // Calcular quais parcelas caem no período
-            for (let i = 0; i < installmentsCount; i++) {
-              const installmentDate = new Date(createdDate);
-              installmentDate.setMonth(installmentDate.getMonth() + i);
+          // Calcular quais parcelas caem no período
+          for (let i = 0; i < installmentsCount; i++) {
+            const installmentDate = new Date(createdDate);
+            installmentDate.setMonth(installmentDate.getMonth() + i);
 
+            // Se não há filtro, incluir todas as parcelas
+            if (!filterStart || !filterEnd) {
+              periodTotal += installmentValue;
+            } else {
               const installmentMonth = new Date(
                 installmentDate.getFullYear(),
                 installmentDate.getMonth(),
@@ -73,14 +79,10 @@ export function DiscountSummary({
                 periodTotal += installmentValue;
               }
             }
-          });
+          }
+        });
 
-          setTotalDiscount(periodTotal);
-        } else {
-          // Sem filtro, pega o total de todos os descontos
-          const total = await getTotalDiscounts(employeeId);
-          setTotalDiscount(total);
-        }
+        setTotalDiscount(periodTotal);
       } catch (error) {
         console.error("Erro ao buscar descontos:", error);
         setTotalDiscount(0);

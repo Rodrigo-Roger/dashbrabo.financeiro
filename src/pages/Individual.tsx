@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { EmployeeSelector } from "@/components/dashboard/EmployeeSelector";
 import { KPICard } from "@/components/dashboard/KPICard";
@@ -9,6 +9,7 @@ import { DiscountInstallments } from "@/components/dashboard/DiscountInstallment
 import { ConditionalRender } from "@/utils/state-components";
 import { useFetchEmployees } from "@/hooks/useFetchEmployees";
 import { calculateCompensation, formatCurrency } from "@/lib/data";
+import { fetchPaymentHistory } from "@/lib/api";
 import {
   Popover,
   PopoverContent,
@@ -29,15 +30,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 
-const sampleRevenueData = [
-  { month: "Ago", value: 18000 },
-  { month: "Set", value: 22000 },
-  { month: "Out", value: 19500 },
-  { month: "Nov", value: 24000 },
-  { month: "Dez", value: 21000 },
-  { month: "Jan", value: 25000 },
-];
-
 export default function Individual() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
     null,
@@ -49,17 +41,60 @@ export default function Individual() {
     endDate?: string;
   }>({});
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<
+    { month: string; value: number }[]
+  >([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const { employees, isLoading, error, rolesMap } =
     useFetchEmployees(appliedFilters);
 
-  const selectedEmployee =
-    employees.find((e) => e.id === selectedEmployeeId) || employees[0];
+  // Manter o ID do vendedor selecionado mesmo quando os filtros mudam
+  const selectedEmployee = useMemo(() => {
+    if (selectedEmployeeId) {
+      // Tentar encontrar o vendedor pelo ID selecionado
+      const employee = employees.find((e) => e.id === selectedEmployeeId);
+      if (employee) return employee;
+    }
+    // Se não encontrou ou não há selecionado, retorna o primeiro
+    return employees[0];
+  }, [employees, selectedEmployeeId]);
+
   const compensation = selectedEmployee
     ? calculateCompensation(selectedEmployee, rolesMap)
     : null;
   const role = selectedEmployee ? rolesMap[selectedEmployee.role] : null;
   const isEmpty = employees.length === 0;
+
+  // Atualizar o ID selecionado quando a lista de employees mudar
+  useEffect(() => {
+    if (employees.length > 0 && !selectedEmployeeId) {
+      setSelectedEmployeeId(employees[0].id);
+    }
+  }, [employees, selectedEmployeeId]);
+
+  // Buscar histórico de pagamento quando o vendedor mudar
+  useEffect(() => {
+    const loadPaymentHistory = async () => {
+      if (!selectedEmployee?.id) {
+        setPaymentHistory([]);
+        return;
+      }
+
+      setLoadingHistory(true);
+      try {
+        const history = await fetchPaymentHistory(selectedEmployee.id, 6);
+        setPaymentHistory(history);
+      } catch (error) {
+        console.error("Erro ao buscar histórico de pagamento:", error);
+        setPaymentHistory([]);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    loadPaymentHistory();
+  }, [selectedEmployee?.id, appliedFilters]);
 
   return (
     <DashboardLayout>
@@ -235,8 +270,34 @@ export default function Individual() {
                 </div>
 
                 <div className="grid gap-5 lg:grid-cols-2">
-                  <CompensationBreakdown compensation={compensation} />
-                  <RevenueChart data={sampleRevenueData} />
+                  <CompensationBreakdown
+                    compensation={compensation}
+                    employeeId={selectedEmployeeId || undefined}
+                    dateFilter={appliedFilters}
+                  />
+                  <RevenueChart
+                    data={
+                      loadingHistory
+                        ? [
+                            { month: "...", value: 0 },
+                            { month: "...", value: 0 },
+                            { month: "...", value: 0 },
+                            { month: "...", value: 0 },
+                            { month: "...", value: 0 },
+                            { month: "...", value: 0 },
+                          ]
+                        : paymentHistory.length > 0
+                          ? paymentHistory
+                          : [
+                              { month: "Jan", value: 0 },
+                              { month: "Fev", value: 0 },
+                              { month: "Mar", value: 0 },
+                              { month: "Abr", value: 0 },
+                              { month: "Mai", value: 0 },
+                              { month: "Jun", value: 0 },
+                            ]
+                    }
+                  />
                 </div>
 
                 <div>

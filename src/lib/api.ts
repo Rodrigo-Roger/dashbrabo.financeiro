@@ -456,3 +456,120 @@ function numOrUndefined(value: unknown): number | undefined {
   const n = Number(value);
   return Number.isFinite(n) ? n : undefined;
 }
+
+/**
+ * Busca histórico de pagamentos de um vendedor
+ */
+export async function fetchPaymentHistory(
+  employeeId: string,
+  months: number = 6,
+): Promise<{ month: string; value: number }[]> {
+  try {
+    // Tentar buscar do endpoint de histórico se existir
+    const response = await api.get(
+      `/moskit/v1/payment-history/${employeeId}/`,
+      {
+        params: { months },
+      },
+    );
+    return response.data;
+  } catch {
+    // Fallback: calcular baseado nos dados do dashboard-summary
+    try {
+      const monthsData = [];
+      const currentDate = new Date();
+
+      for (let i = months - 1; i >= 0; i--) {
+        const monthDate = new Date(currentDate);
+        monthDate.setMonth(monthDate.getMonth() - i);
+
+        const startDate = new Date(
+          monthDate.getFullYear(),
+          monthDate.getMonth(),
+          1,
+        );
+        const endDate = new Date(
+          monthDate.getFullYear(),
+          monthDate.getMonth() + 1,
+          0,
+        );
+
+        const response = await api.get("/moskit/v1/dashboard-summary/", {
+          params: {
+            seller: employeeId,
+            start_date: startDate.toISOString().split("T")[0],
+            end_date: endDate.toISOString().split("T")[0],
+          },
+        });
+
+        const employees = mapApiEmployeesToLocal(response.data);
+        const employee = employees.find((e) => e.id === employeeId);
+
+        if (employee) {
+          const compensation = await import("./data").then((m) =>
+            m.calculateCompensation(employee, m.ROLES),
+          );
+
+          // Buscar descontos do período e calcular apenas as parcelas do mês
+          let monthDiscounts = 0;
+          try {
+            const discounts = await fetchDiscounts(employeeId);
+            const filterStart = startDate;
+            const filterEnd = endDate;
+
+            discounts.forEach((discount) => {
+              if (!discount.created_at) return;
+
+              const createdDate = new Date(discount.created_at);
+              const installmentsCount = discount.installments_count || 1;
+              const totalAmount = Number(discount.total_discount || 0);
+              const installmentValue = totalAmount / installmentsCount;
+
+              // Calcular quais parcelas caem neste mês
+              for (let j = 0; j < installmentsCount; j++) {
+                const installmentDate = new Date(createdDate);
+                installmentDate.setMonth(installmentDate.getMonth() + j);
+
+                const installmentMonth = new Date(
+                  installmentDate.getFullYear(),
+                  installmentDate.getMonth(),
+                  1,
+                );
+                const installmentMonthEnd = new Date(
+                  installmentDate.getFullYear(),
+                  installmentDate.getMonth() + 1,
+                  0,
+                );
+
+                // Verificar se há sobreposição entre o mês e a parcela
+                if (
+                  installmentMonth <= filterEnd &&
+                  installmentMonthEnd >= filterStart
+                ) {
+                  monthDiscounts += installmentValue;
+                }
+              }
+            });
+          } catch {
+            // Se falhar ao buscar descontos, continua sem descontos
+          }
+
+          monthsData.push({
+            month: monthDate.toLocaleDateString("pt-BR", { month: "short" }),
+            value: compensation.total - monthDiscounts,
+          });
+        } else {
+          monthsData.push({
+            month: monthDate.toLocaleDateString("pt-BR", { month: "short" }),
+            value: 0,
+          });
+        }
+      }
+
+      return monthsData;
+    } catch {
+      // Se tudo falhar, retornar dados vazios
+      return [];
+    }
+  }
+}
