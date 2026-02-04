@@ -10,10 +10,13 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, X, Search } from "lucide-react";
+import { Calendar as CalendarIcon, RefreshCw, Search, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { syncMoskitData } from "@/lib/api";
+import { toast } from "sonner";
 
 export default function Implantados() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -26,6 +29,22 @@ export default function Implantados() {
 
   const { employees, isLoading, error } = useFetchEmployees(appliedFilters);
   const isEmpty = employees.length === 0;
+  const queryClient = useQueryClient();
+
+  const syncMutation = useMutation({
+    mutationFn: (vendedorId?: string) => syncMoskitData(vendedorId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["employees"] });
+      toast.success("Sincronização concluída com sucesso");
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível sincronizar os dados",
+      );
+    },
+  });
 
   return (
     <DashboardLayout>
@@ -46,6 +65,18 @@ export default function Implantados() {
               </div>
 
               <div className="flex gap-2 w-full md:w-auto">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => syncMutation.mutate()}
+                  disabled={syncMutation.isPending}
+                  title="Sincronizar dados"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {syncMutation.isPending ? "Sincronizando..." : "Sincronizar"}
+                </Button>
+
                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button
