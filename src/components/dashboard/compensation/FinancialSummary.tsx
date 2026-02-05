@@ -8,7 +8,8 @@ import {
   ROLES,
   type RoleMap,
 } from "@/lib/data";
-import { getTotalDiscounts } from "@/lib/api";
+import { fetchDiscounts } from "@/lib/api";
+import { getDiscountTotal } from "@/lib/discounts";
 
 interface FinancialSummaryProps {
   employees: Employee[];
@@ -36,16 +37,16 @@ export function FinancialSummary({
       const discounts: Record<string, number> = {};
 
       for (const employee of employees) {
-        const allDiscounts = await getTotalDiscounts(employee.id);
+        const allDiscounts = await fetchDiscounts(employee.id);
 
         // Filtrar por período se fornecido
         if (dateFilter?.startDate && dateFilter?.endDate) {
-          const startDate = new Date(dateFilter.startDate);
-          const endDate = new Date(dateFilter.endDate);
-          // getTotalDiscounts já retorna o valor total, aqui apenas aplicamos o filtro
-          discounts[employee.id] = allDiscounts;
+          discounts[employee.id] = getDiscountTotal(allDiscounts, dateFilter);
         } else {
-          discounts[employee.id] = allDiscounts;
+          discounts[employee.id] = allDiscounts.reduce((sum, discount) => {
+            const amount = Number(discount.total_discount || 0);
+            return sum + (Number.isFinite(amount) ? amount : 0);
+          }, 0);
         }
       }
 
